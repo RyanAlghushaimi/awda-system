@@ -1,0 +1,20 @@
+================================================================
+TAG: ERP_v2.7_FIREBASE_TEST (RC1)
+تاريخ التجميد: هذه هي النسخة المُجمَّدة للاختبار الحقيقي على Firebase
+================================================================
+
+حالة هذه النسخة:
+- 6 أقسام منقولة إلى Firestore Collections مستقلة:
+  vacants, units, employees, maintenance, collections_tahsil, agents
+- Tombstones مُعاد تفعيلها كطبقة أمان مؤقتة (لن تُحذف إلا بعد نجاح الاختبار)
+- Transaction محمي (Lost Update Prevention) في كل عمليات update/updateWithFn
+- MigrationRegistry يمنع إعادة الترحيل
+- Offline Persistence مفعّلة
+- Lazy Loading: غير مُطبَّق (بقرار صريح، لاحقًا فقط بعد نجاح الاختبار)
+- boot(): لم يتغيّر، يشغّل init() لكل الأقسام الستة بالتوازي
+
+قاعدة صارمة: لا تُعدَّل أي سطر في هذه النسخة حتى تكتمل الاختبارات الثمانية
+(Add/Edit/Delete/Realtime/Offline/Transaction Conflict/Restart/Multi-device)
+على Firebase حقيقي بين جهازين، لكل قسم من الستة.
+
+الخطوة التالية بعد نجاح الاختبار: حذف Tombstones نهائيًا → Lazy Loading → تشديد الأمان.

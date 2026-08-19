@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ============================================================
+    // ملاحظة معمارية مهمة: هذا النظام يستخدم نظام مصادقة خاصًا به (جدول
+    // users داخل appData/Firestore نفسه، بأسماء مستخدمين وكلمات مرور محلية
+    // للتطبيق) — وليس Firebase Authentication. لذلك request.auth دائمًا null
+    // حاليًا، ولا يمكن تفعيل قواعد قائمة على "if request.auth != null" قبل
+    // ربط النظام فعليًا بـ Firebase Authentication (خطوة تكامل منفصلة تتطلب
+    // تعديل شاشة تسجيل الدخول لاستخدام signInWithEmailAndPassword أو ما شابه).
+    //
+    // الوضع الحالي: القواعد أدناه مفتوحة (allow read, write: if true) — مقبول
+    // فقط إذا كان رابط الموقع غير معلن للعامة ومستخدم من موظفي الشركة حصرًا.
+    // ============================================================
+
+    match /awda_system/{docId} {
+      allow read, write: if true;
+    }
+
+    // ===== Collections مستقلة (خطة إعادة الهيكلة الكاملة) =====
+    match /maintenance/{docId} {
+      allow read, write: if true;
+    }
+    match /vacants/{docId} {
+      allow read, write: if true;
+    }
+    match /units/{docId} {
+      allow read, write: if true;
+    }
+    match /employees/{docId} {
+      allow read, write: if true;
+    }
+    match /collections_tahsil/{docId} {
+      allow read, write: if true;
+    }
+    match /agents/{docId} {
+      allow read, write: if true;
+    }
+    match /vacLog/{docId} {
+  allow read, write: if true;
+}
+
+match /unitsLog/{docId} {
+  allow read, write: if true;
+}
+
+match /collectionsLog/{docId} {
+  allow read, write: if true;
+}
+
+match /employeesLog/{docId} {
+  allow read, write: if true;
+}
+
+match /maintenanceLog/{docId} {
+  allow read, write: if true;
+}
+
+    // ===== اتفاقيات إدارة العقود وسجلّها (كانتا ناقصتين — سبب أخطاء
+    // "Missing or insufficient permissions" على contractAgreements و contractsLog) =====
+    match /contractAgreements/{docId} {
+      allow read, write: if true;
+    }
+    match /contractsLog/{docId} {
+      allow read, write: if true;
+    }
+
+    match /presence/{docId} {
+      allow read, write: if true;
+    }
+
+    // سجل الترحيل الداخلي — لا يحتاج وصول المستخدمين مباشرة، لكن يُترك بنفس
+    // مستوى الحماية المؤقت حتى لا يفشل MigrationRegistry قبل تفعيل Auth.
+    match /_meta/{docId} {
+      allow read, write: if true;
+    }
+  }
+}
+
+// ============================================================
+// ===== Phase 2 (جاهزة للتفعيل بعد ربط Firebase Authentication) =====
+// ============================================================
+// عند ربط تسجيل الدخول بـ Firebase Auth فعليًا (بدل النظام المخصص الحالي)،
+// استبدل كتلة service أعلاه بما يشبه هذا (بعد تعديله حسب هيكل الأدوار):
+//
+// service cloud.firestore {
+//   match /databases/{database}/documents {
+//     function isSignedIn() { return request.auth != null; }
+//     function currentRole() {
+//       return get(/databases/$(database)/documents/employees/$(request.auth.uid)).data.role;
+//     }
+//     function isManager() { return isSignedIn() && currentRole() == 'مدير'; }
+//
+//     match /awda_system/{docId} { allow read, write: if isSignedIn(); }
+//     match /maintenance/{docId} { allow read, write: if isSignedIn(); }
+//     match /vacants/{docId}     { allow read, write: if isSignedIn(); }
+//     match /units/{docId}       { allow read, write: if isSignedIn(); }
+//     match /employees/{docId}   { allow read: if isSignedIn(); allow write: if isManager(); }
+//     match /collections_tahsil/{docId} { allow read, write: if isSignedIn(); }
+//     match /agents/{docId}      { allow read, write: if isSignedIn(); }
+//     match /_meta/{docId}       { allow read: if isSignedIn(); allow write: if false; } // للسيرفر فقط
+//   }
+// }
+

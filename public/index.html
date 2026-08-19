@@ -7026,7 +7026,9 @@ const MaintenanceRepository = {
       if (document.getElementById('maintSheetReqContent')) renderMaintSheetRequests();
     });
     // مزامنة فورية عند الإقلاع لجلب أي بلاغات جديدة من نموذج جوجل
-    syncMaintSheetRequests().catch(e => console.warn('مزامنة طلبات نموذج الصيانة عند الإقلاع:', e));
+    syncMaintSheetRequests()
+      .then(() => backfillMaintSheetReqNumbers())
+      .catch(e => console.warn('مزامنة طلبات نموذج الصيانة عند الإقلاع:', e));
   },
   async getRequests() { this.ensure(); return appData.maintenance.requests; },
   async getSchedules() { this.ensure(); return appData.maintenance.schedules; },
@@ -7172,6 +7174,10 @@ async function syncMaintSheetRequests() {
   if (rows.length < 2) return 0;
   const dataRows = rows.slice(1); // تجاوز صف العناوين
   const existingIds = new Set(appData.maintenance.sheetRequests.map(r => r.id));
+  // رقم البلاغ (reqNum) ثابت ودائم لكل طلب — يُخصَّص مرة واحدة عند وصوله ولا
+  // يتغيّر بعدها أبدًا (يُستخدم للتعريف عند العرض/النسخ فقط، ولا علاقة له
+  // بشارة الإشعارات ولا بحالة "تمت الصيانة"). نبدأ من أعلى رقم موجود حاليًا.
+  let nextReqNum = appData.maintenance.sheetRequests.reduce((m, r) => r.reqNum ? Math.max(m, r.reqNum) : m, 0);
   const newItems = [];
   dataRows.forEach(cols => {
     if (!cols || !cols.some(c => (c || '').trim())) return; // صف فارغ بالكامل
@@ -7180,8 +7186,9 @@ async function syncMaintSheetRequests() {
     const key = `${timestamp}|${unit}|phone:${phone}|${problem}`.trim();
     const id = maintSheetRowHash(key);
     if (existingIds.has(id)) return; // موجود مسبقاً — لا نكرره ولا نلمس done/notes الخاصة به
+    nextReqNum += 1;
     newItems.push({
-      id, timestamp: timestamp.trim(), unit: unit.trim(), property: property.trim(),
+      id, reqNum: nextReqNum, timestamp: timestamp.trim(), unit: unit.trim(), property: property.trim(),
       reporterName: reporterName.trim(), phone: phone.trim(), problem: problem.trim(),
       bestTime: bestTime.trim(), attachments: attach.split(',').map(s => s.trim()).filter(Boolean),
       email: email.trim(), done: false, notes: '', doneAt: null, doneBy: null
@@ -7207,6 +7214,7 @@ function manualSyncMaintSheetRequests() {
   }
   syncMaintSheetRequests().then(n => {
     showToast(n > 0 ? `تمت المزامنة — ${n} بلاغ جديد` : 'تمت المزامنة — لا توجد بلاغات جديدة', 'success');
+    backfillMaintSheetReqNumbers();
   }).catch(e => {
     console.error('[syncMaintSheetRequests]', e);
     showToast('تعذرت مزامنة بلاغات النموذج — تأكد من الاتصال أو صلاحية مشاركة الشيت', 'error');
@@ -7221,9 +7229,13 @@ function manualSyncMaintSheetRequests() {
 // يُحسب من البلاغات غير المكتملة (done:false) في appData.maintenance.sheetRequests،
 // ويُستدعى من كل نقطة تتغيّر فيها هذه القائمة فعليًا (عرض الصفحة، التحديث
 // اللحظي عبر onSnapshot، وبعد كل مزامنة يدوية أو تلقائية).
+// شارة الإشعارات تعرض العدد الكلي لكل بلاغات نموذج الصيانة دائمًا — لا علاقة
+// لها إطلاقًا بحالة "تمت الصيانة"/"لم تتم" (بطلب صريح من المستخدم)، ولا
+// تتأثر بالضغط على "تمت الصيانة". رقم البلاغ الخاص بكل طلب (reqNum) مسألة
+// منفصلة تمامًا تُستخدم فقط للتعريف عند العرض والنسخ.
 function updateMaintNotifBadge() {
   const list = (appData.maintenance && appData.maintenance.sheetRequests) || [];
-  const count = list.filter(r => !r.done).length;
+  const count = list.length;
   [['navBadgeMaintTrack', count], ['navBadgeMaintParent', count]].forEach(([id, n]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -7268,6 +7280,30 @@ function parseMaintSheetTimestamp(ts) {
   const d3 = new Date(t);
   if (!isNaN(d3.getTime())) return d3.getTime();
   return 0;
+}
+// تعبئة رقم البلاغ (reqNum) للبلاغات القديمة التي أُضيفت قبل وجود هذه الميزة
+// (لم يكن لها رقم أصلاً) — تُخصَّص لها أرقام حسب ترتيبها الزمني الفعلي
+// (الأقدم يأخذ الرقم الأصغر) مرة واحدة فقط، ثم تُحفَظ في Firestore لتبقى
+// ثابتة للأبد بعدها ولا تُعاد حسابتها من جديد.
+let _reqNumBackfillDone = false;
+async function backfillMaintSheetReqNumbers() {
+  if (_reqNumBackfillDone) return;
+  const list = appData.maintenance.sheetRequests || [];
+  const missing = list.filter(r => !r.reqNum);
+  if (!missing.length) { _reqNumBackfillDone = true; return; }
+  let maxNum = list.reduce((m, r) => r.reqNum ? Math.max(m, r.reqNum) : m, 0);
+  missing.sort((a, b) => parseMaintSheetTimestamp(a.timestamp) - parseMaintSheetTimestamp(b.timestamp));
+  const canPersist = typeof MaintenanceCollectionService !== 'undefined' && typeof MaintenanceCollectionService.update === 'function';
+  for (const r of missing) {
+    maxNum += 1;
+    r.reqNum = maxNum; // تحديث محلي فوري حتى يظهر الرقم بلا انتظار
+    if (canPersist) {
+      try { await MaintenanceCollectionService.update(r.id, { reqNum: r.reqNum }); }
+      catch (e) { console.warn('[backfillMaintSheetReqNumbers] تعذّر حفظ رقم البلاغ', r.id, e); }
+    }
+  }
+  _reqNumBackfillDone = true;
+  if (document.getElementById('maintSheetReqContent')) renderMaintSheetRequests();
 }
 function setMaintSheetFilter(v) {
   maintSheetFilter = v;
@@ -7314,7 +7350,10 @@ function renderMaintSheetRequests() {
     return `
     <div class="card" style="margin:0;border-right:5px solid ${color};background:${bg};">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">
-        <span class="badge" style="background:${color};color:#fff;">${r.done ? 'تمت الصيانة' : 'لم تتم الصيانة'}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge badge-info" style="font-weight:700;">#${r.reqNum || '—'}</span>
+          <span class="badge" style="background:${color};color:#fff;">${r.done ? 'تمت الصيانة' : 'لم تتم الصيانة'}</span>
+        </div>
         <div style="font-size:11px;color:var(--text-light);white-space:nowrap;"><i class="fas fa-calendar"></i> ${r.timestamp || '—'}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:7px;">
@@ -7328,14 +7367,69 @@ function renderMaintSheetRequests() {
       </div>
       ${r.notes ? `<div style="font-size:12px;color:${color};margin-top:10px;background:${bg};border-radius:6px;padding:6px 8px;"><i class="fas fa-sticky-note"></i> ${r.notes}</div>` : ''}
       ${attachHtml}
-      ${canManage ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+        <button class="btn btn-outline btn-sm" onclick="showMaintSheetRequestDetails('${r.id}')"><i class="fas fa-eye"></i> عرض البيانات</button>
+        ${canManage ? `
             ${r.done
         ? `<button class="btn btn-outline btn-sm" onclick="toggleMaintSheetDone('${r.id}', false)">إلغاء إتمام الصيانة</button>`
         : `<button class="btn btn-sm" style="background:${doneColor};color:#fff;" onclick="toggleMaintSheetDone('${r.id}', true)">تمت الصيانة</button>`}
             <button class="btn btn-outline btn-sm" onclick="addMaintSheetNote('${r.id}')"><i class="fas fa-sticky-note"></i> إضافة ملاحظات</button>
-          </div>` : ''}
+          ` : ''}
+      </div>
     </div>`;
   }).join('') + '</div>';
+}
+// يبني نص البيانات الكاملة للبلاغ بصيغة موحّدة (تُستخدم في العرض والنسخ معًا)
+function formatMaintSheetRequestText(r) {
+  const lines = [
+    `طلب الصيانة رقم ${r.reqNum || '—'}`,
+    '——————————————',
+    `الاسم: ${r.reporterName || '—'}`,
+    `الجوال: ${r.phone || '—'}`,
+    `العقار: ${r.property || '—'}`,
+    `الوحدة: ${r.unit || '—'}`,
+    `المشكلة: ${r.problem || '—'}`,
+    `أفضل وقت للتواصل: ${r.bestTime || '—'}`,
+  ];
+  if (r.email) lines.push(`البريد: ${r.email}`);
+  lines.push(`الحالة: ${r.done ? 'تمت الصيانة' : 'لم تتم الصيانة'}`);
+  if (r.notes) lines.push(`ملاحظات: ${r.notes}`);
+  if ((r.attachments || []).length) lines.push(`المرفقات: ${r.attachments.join(' | ')}`);
+  lines.push(`وقت وتاريخ إرسال الطلب: ${r.timestamp || '—'}`);
+  return lines.join('\n');
+}
+// نافذة "عرض البيانات" — تعرض كامل بيانات البلاغ، وفي الأسفل زر "نسخ البيانات"
+// الذي ينسخ نفس النص المعروض بالضبط (بما فيه رقم الطلب ووقت/تاريخ الإرسال)
+// إلى الحافظة مباشرة.
+function showMaintSheetRequestDetails(id) {
+  ensureMaintenanceData();
+  const r = appData.maintenance.sheetRequests.find(x => x.id === id);
+  if (!r) return;
+  const text = formatMaintSheetRequestText(r);
+  Swal.fire({
+    title: `طلب الصيانة رقم ${r.reqNum || '—'}`,
+    html: `<pre style="text-align:right;direction:rtl;white-space:pre-wrap;font-family:inherit;font-size:14px;background:#f8f9fa;border-radius:8px;padding:12px;margin:0;">${text.replace(/</g,'&lt;')}</pre>`,
+    width: 520,
+    showCancelButton: true,
+    confirmButtonText: '<i class="fas fa-copy"></i> نسخ البيانات',
+    cancelButtonText: 'إغلاق',
+    confirmButtonColor: '#0d2137'
+  }).then(res => {
+    if (!res.isConfirmed) return;
+    const finish = () => showToast('تم نسخ بيانات الطلب', 'success');
+    const fail = () => showToast('تعذر النسخ التلقائي — انسخ النص يدويًا من النافذة', 'error');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(finish).catch(fail);
+    } else {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        finish();
+      } catch (e) { fail(); }
+    }
+  });
 }
 function toggleMaintSheetDone(id, done) {
   ensureMaintenanceData();

@@ -8138,22 +8138,22 @@ function viewContractAgreement(id) {
     ['تاريخ التأجير', `${fmtRentalDate(a.rentalFrom)} - ${a.rentalTo || ''}`], ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName],
     ['اسم العميل', a.customerName], ['رقم الهوية', a.idNumber], ['رقم الجوال', a.mobile], ['تاريخ الميلاد', a.dob],
     ['قيمة التأجير', a.saleValue], ['طريقة الدفع', a.howToPay], ['التأمين', a.insurance], ['الرسوم', a.feeAmount],
-    ['المسوق', a.soldBy], ['ملاحظات', a.notes], ['عداد الكهرباء', a.elecMeter], ['مبلغ الكهرباء', a.elecBill],
-    ['عداد الماء', a.waterMeter], ['مبلغ الماء', a.waterBill], ['سداد لم يدفع', a.unpaidPayment], ['تقرير ناجز', a.report]
+    ['المسوق', a.soldBy], ['تقرير ناجز', a.report], ['ملاحظات', a.notes], ['عداد الكهرباء', a.elecMeter], ['مبلغ الكهرباء', a.elecBill],
+    ['عداد الماء', a.waterMeter], ['مبلغ الماء', a.waterBill], ['سداد لم يدفع', a.unpaidPayment]
   ] : a.type === 'renew' ? [
     ['تاريخ التأجير', `${fmtRentalDate(a.rentalFrom)} - ${a.rentalTo || ''}`], ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName],
     ['اسم العميل', a.customerName], ['رقم الهوية', a.idNumber], ['رقم الجوال', a.mobile], ['تاريخ الميلاد', a.dob],
     ['قيمة التأجير الحالي', a.saleValueOld], ['قيمة التأجير الجديد', a.saleValueNew], ['طريقة الدفع', a.howToPay], ['التأمين', a.insurance], ['الرسوم', a.feeAmount],
-    ['المسوق', a.soldBy], ['ملاحظات', a.notes], ['عداد الكهرباء', a.elecMeter], ['مبلغ الكهرباء', a.elecBill],
-    ['عداد الماء', a.waterMeter], ['مبلغ الماء', a.waterBill], ['سداد لم يدفع', a.unpaidPayment], ['تقرير ناجز', a.report]
+    ['المسوق', a.soldBy], ['تقرير ناجز', a.report], ['ملاحظات', a.notes], ['عداد الكهرباء', a.elecMeter], ['مبلغ الكهرباء', a.elecBill],
+    ['عداد الماء', a.waterMeter], ['مبلغ الماء', a.waterBill], ['سداد لم يدفع', a.unpaidPayment]
   ] : [
     ['السبب', a.reason],
     ['تاريخ التأجير السابق', `${fmtRentalDate(a.beforeFrom)} - ${a.beforeTo || ''}`], ['تاريخ التأجير الجديد', `${fmtRentalDate(a.newFrom)} - ${a.newTo || ''}`],
     ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName], ['العميل السابق', a.oldCustomerName], ['العميل الجديد', a.newCustomerName],
     ['رقم الهوية (جديد)', a.newIdNumber], ['رقم الجوال (جديد)', a.newMobile], ['تاريخ الميلاد', a.dob],
     ['قيمة التأجير السابق', a.saleValueOld], ['قيمة التأجير الجديد', a.saleValueNew],
-    ['طريقة الدفع', a.howToPay], ['التأمين', a.insurance], ['السعي', a.services], ['المسوق', a.soldBy],
-    ['عداد الكهرباء', a.elecMeter], ['عداد الماء', a.waterMeter], ['سداد لم يدفع', a.unpaidPayment], ['تقرير ناجز', a.report]
+    ['طريقة الدفع', a.howToPay], ['التأمين', a.insurance], ['السعي', a.services], ['المسوق', a.soldBy], ['تقرير ناجز', a.report],
+    ['عداد الكهرباء', a.elecMeter], ['عداد الماء', a.waterMeter], ['سداد لم يدفع', a.unpaidPayment]
   ];
   Swal.fire({
     title: contractDisplayName(a) || 'تفاصيل الاتفاقية', width: 560,
@@ -8185,6 +8185,7 @@ function printContractAgreement(id) {
       ${row('التأمين', 'Insurance', a.insurance)}
       ${row('الرسوم', 'Fee Amount', a.feeAmount)}
       ${row('المسوق', 'Sold By', a.soldBy)}
+      ${row('تقرير ناجز', 'Najiz Report', a.report)}
       ${row('ملاحظات', 'Notes', a.notes)}
     </table>`;
     bodyHtml += `<table>
@@ -8198,7 +8199,6 @@ function printContractAgreement(id) {
     bodyHtml += `<table>
       ${row('سداد لم يدفع', 'Unpaid Payment', a.unpaidPayment)}
       ${row('ملاحظات', 'Notes', a.notes2)}
-      ${row('تقرير ناجز', 'Final Report', a.report)}
     </table>`;
   } else if (a.type === 'renew') {
     bodyHtml += centerBold('اتفاقية تجديد عقد / Agreement Renewal Rental');
@@ -8216,6 +8216,7 @@ function printContractAgreement(id) {
       ${row('التأمين', 'Insurance', a.insurance)}
       ${row('الرسوم', 'Fee Amount', a.feeAmount)}
       ${row('المسوق', 'Sold By', a.soldBy)}
+      ${row('تقرير ناجز', 'Najiz Report', a.report)}
       ${row('ملاحظات', 'Notes', a.notes)}
     </table>`;
     bodyHtml += `<table>
@@ -8229,7 +8230,6 @@ function printContractAgreement(id) {
     bodyHtml += `<table>
       ${row('سداد لم يدفع', 'Unpaid Payment', a.unpaidPayment)}
       ${row('ملاحظات', 'Notes', a.notes2)}
-      ${row('تقرير ناجز', 'Final Report', a.report)}
     </table>`;
   } else {
     bodyHtml += centerBold('اتفاقية تعديل بيانات / Agreement Edit Data');
@@ -8252,6 +8252,7 @@ function printContractAgreement(id) {
       ${row('التأمين', 'Insurance', a.insurance)}
       ${row('السعي', 'Services and Pursuit', a.services)}
       ${row('المسوق', 'Sold By', a.soldBy)}
+      ${row('تقرير ناجز', 'Najiz Report', a.report)}
     </table>`;
     bodyHtml += `<table>
       ${row('رقم عداد الكهرباء', 'Electricity Meter Number', a.elecMeter)}
@@ -8264,7 +8265,6 @@ function printContractAgreement(id) {
     bodyHtml += `<table>
       ${row('سداد لم يدفع', 'Unpaid Payment', a.unpaidPayment)}
       ${row('ملاحظات', 'Notes', a.notes2)}
-      ${row('تقرير ناجز', 'Final Report', a.report)}
     </table>`;
   }
 

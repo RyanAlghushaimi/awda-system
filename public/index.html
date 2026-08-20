@@ -9044,6 +9044,12 @@ function showLoginGate() {
       u = appData.users.list.find(x => x.username === username && x.passwordHash === legacyHash);
       if (u) { u.passwordHash = hash; upgraded = true; } // ترقية صامتة للصيغة الجديدة
     }
+    if (!u) {
+      // دعم توافق إضافي: حساب أُنشئ ببيئة (محلية/مستضافة) تستخدم خوارزمية تشفير مختلفة تمامًا،
+      // فتتم مطابقته عبر passwordPlain ثم ترقيته فورًا لصيغة الـ hash الحالية.
+      u = appData.users.list.find(x => x.username === username && x.passwordPlain === password);
+      if (u) { u.passwordHash = hash; upgraded = true; }
+    }
     if (!u) { errEl.textContent = 'اسم المستخدم أو كلمة المرور غير صحيحة'; submitBtn.disabled = false; return; }
     if (u.status !== 'active') { errEl.textContent = 'هذا الحساب موقوف'; submitBtn.disabled = false; return; }
     currentUser = u;

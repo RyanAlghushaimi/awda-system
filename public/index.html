@@ -3229,6 +3229,15 @@ updateClock();
 // ============================================================
 function fmt(n) { return (Number(n)||0).toLocaleString('ar-SA'); }
 function fmtDate(d) { if (!d) return ''; try { return new Date(d).toLocaleDateString('ar-SA'); } catch { return d; } }
+// تنسيق تاريخ التأجير للعرض/الطباعة فقط بصيغة يوم/شهر/سنة (DD/MM/YYYY)، دون
+// المساس بالقيمة المخزَّنة (تبقى yyyy-mm-dd) حتى لا تتأثر مقارنات التحقق من
+// صحة نطاقات التاريخ في saveContractAgreement.
+function fmtRentalDate(d) {
+  if (!d) return '';
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return d;
+}
 
 // ============================================================
 // ===== DASHBOARD =====
@@ -7862,7 +7871,8 @@ function renderContractsEntryPage() {
     cTextarea('cn-waterNotes', 'ملاحظات Notes');
   document.getElementById('contractNewFinalFields').innerHTML =
     cField('cn-unpaid', 'سداد لم يدفع Unpaid Payment') +
-    cTextarea('cn-notes2', 'ملاحظات Notes');
+    cTextarea('cn-notes2', 'ملاحظات Notes') +
+    cTextarea('cn-report', 'تقرير ناجز Final Report');
 
   document.getElementById('contractRenewFields').innerHTML =
     cDatePair('cr-rentalFrom', 'cr-rentalTo', 'تاريخ التأجير Rental Date') +
@@ -7888,7 +7898,8 @@ function renderContractsEntryPage() {
     cTextarea('cr-waterNotes', 'ملاحظات Notes');
   document.getElementById('contractRenewFinalFields').innerHTML =
     cField('cr-unpaid', 'سداد لم يدفع Unpaid Payment') +
-    cTextarea('cr-notes2', 'ملاحظات Notes');
+    cTextarea('cr-notes2', 'ملاحظات Notes') +
+    cTextarea('cr-report', 'تقرير ناجز Final Report');
 
   document.getElementById('contractChangeFields').innerHTML =
     cField('cc-reason', 'السبب Reason') +
@@ -7918,7 +7929,8 @@ function renderContractsEntryPage() {
     cTextarea('cc-waterNotes', 'ملاحظات Notes');
   document.getElementById('contractChangeFinalFields').innerHTML =
     cField('cc-unpaid', 'سداد لم يدفع Unpaid Payment') +
-    cTextarea('cc-notes2', 'ملاحظات Notes');
+    cTextarea('cc-notes2', 'ملاحظات Notes') +
+    cTextarea('cc-report', 'تقرير ناجز Final Report');
 
   ['cn-soldBy', 'cr-soldBy', 'cc-soldBy'].forEach(id => { const el = document.getElementById(id); if (el) el.value = currentUserDisplayName(); });
 
@@ -7950,7 +7962,7 @@ function fillContractForm(a) {
     setv('cn-insurance', a.insurance); setv('cn-feeAmount', a.feeAmount); setv('cn-soldBy', a.soldBy); setv('cn-notes', a.notes);
     setv('cn-elecMeter', a.elecMeter); setv('cn-elecBill', a.elecBill); setv('cn-elecNotes', a.elecNotes);
     setv('cn-waterMeter', a.waterMeter); setv('cn-waterBill', a.waterBill); setv('cn-waterNotes', a.waterNotes);
-    setv('cn-unpaid', a.unpaidPayment); setv('cn-notes2', a.notes2);
+    setv('cn-unpaid', a.unpaidPayment); setv('cn-notes2', a.notes2); setv('cn-report', a.report);
   } else if (a.type === 'renew') {
     setv('cr-rentalFrom', a.rentalFrom); setv('cr-rentalTo', a.rentalTo); setv('cr-location', a.location);
     setv('cr-unitName', a.unitName); setv('cr-customerName', a.customerName); setv('cr-idNumber', a.idNumber);
@@ -7959,7 +7971,7 @@ function fillContractForm(a) {
     setv('cr-soldBy', a.soldBy); setv('cr-notes', a.notes);
     setv('cr-elecMeter', a.elecMeter); setv('cr-elecBill', a.elecBill); setv('cr-elecNotes', a.elecNotes);
     setv('cr-waterMeter', a.waterMeter); setv('cr-waterBill', a.waterBill); setv('cr-waterNotes', a.waterNotes);
-    setv('cr-unpaid', a.unpaidPayment); setv('cr-notes2', a.notes2);
+    setv('cr-unpaid', a.unpaidPayment); setv('cr-notes2', a.notes2); setv('cr-report', a.report);
   } else {
     setv('cc-beforeFrom', a.beforeFrom); setv('cc-beforeTo', a.beforeTo); setv('cc-newFrom', a.newFrom); setv('cc-newTo', a.newTo);
     setv('cc-location', a.location); setv('cc-unitName', a.unitName);
@@ -7970,7 +7982,7 @@ function fillContractForm(a) {
     setv('cc-services', a.services); setv('cc-soldBy', a.soldBy);
     setv('cc-elecMeter', a.elecMeter); setv('cc-elecBill', a.elecBill); setv('cc-elecNotes', a.elecNotes);
     setv('cc-waterMeter', a.waterMeter); setv('cc-waterBill', a.waterBill); setv('cc-waterNotes', a.waterNotes);
-    setv('cc-unpaid', a.unpaidPayment); setv('cc-notes2', a.notes2);
+    setv('cc-unpaid', a.unpaidPayment); setv('cc-notes2', a.notes2); setv('cc-report', a.report);
   }
 }
 let contractSaveInProgress = false;
@@ -8020,7 +8032,7 @@ async function saveContractAgreement(type, evt) {
       soldBy: val('cn-soldBy'), notes: val('cn-notes'),
       elecMeter: val('cn-elecMeter'), elecBill: val('cn-elecBill'), elecNotes: val('cn-elecNotes'),
       waterMeter: val('cn-waterMeter'), waterBill: val('cn-waterBill'), waterNotes: val('cn-waterNotes'),
-      unpaidPayment: val('cn-unpaid'), notes2: val('cn-notes2')
+      unpaidPayment: val('cn-unpaid'), notes2: val('cn-notes2'), report: val('cn-report')
     };
     if (!data.customerName) { showToast('يرجى إدخال اسم العميل', 'error'); restoreButton(); return; }
     if (data.rentalFrom && data.rentalTo && data.rentalFrom > data.rentalTo) {
@@ -8034,7 +8046,7 @@ async function saveContractAgreement(type, evt) {
       soldBy: val('cr-soldBy'), notes: val('cr-notes'),
       elecMeter: val('cr-elecMeter'), elecBill: val('cr-elecBill'), elecNotes: val('cr-elecNotes'),
       waterMeter: val('cr-waterMeter'), waterBill: val('cr-waterBill'), waterNotes: val('cr-waterNotes'),
-      unpaidPayment: val('cr-unpaid'), notes2: val('cr-notes2')
+      unpaidPayment: val('cr-unpaid'), notes2: val('cr-notes2'), report: val('cr-report')
     };
     if (!data.customerName) { showToast('يرجى إدخال اسم العميل', 'error'); restoreButton(); return; }
     if (data.rentalFrom && data.rentalTo && data.rentalFrom > data.rentalTo) {
@@ -8051,7 +8063,7 @@ async function saveContractAgreement(type, evt) {
       services: val('cc-services'), soldBy: val('cc-soldBy'),
       elecMeter: val('cc-elecMeter'), elecBill: val('cc-elecBill'), elecNotes: val('cc-elecNotes'),
       waterMeter: val('cc-waterMeter'), waterBill: val('cc-waterBill'), waterNotes: val('cc-waterNotes'),
-      unpaidPayment: val('cc-unpaid'), notes2: val('cc-notes2')
+      unpaidPayment: val('cc-unpaid'), notes2: val('cc-notes2'), report: val('cc-report')
     };
     if (!data.newCustomerName) { showToast('يرجى إدخال اسم العميل الجديد', 'error'); restoreButton(); return; }
     if (data.beforeFrom && data.beforeTo && data.beforeFrom > data.beforeTo) {
@@ -8113,25 +8125,25 @@ function editContractAgreement(id) {
 function viewContractAgreement(id) {
   const a = appData.contracts.agreements.find(x => x.id === id); if (!a) return;
   const rows = a.type === 'new' ? [
-    ['تاريخ التأجير', `${a.rentalFrom || ''} - ${a.rentalTo || ''}`], ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName],
+    ['تاريخ التأجير', `${fmtRentalDate(a.rentalFrom)} - ${fmtRentalDate(a.rentalTo)}`], ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName],
     ['اسم العميل', a.customerName], ['رقم الهوية', a.idNumber], ['رقم الجوال', a.mobile], ['تاريخ الميلاد', a.dob],
     ['قيمة التأجير', a.saleValue], ['طريقة الدفع', a.howToPay], ['التأمين', a.insurance], ['الرسوم', a.feeAmount],
     ['المسوق', a.soldBy], ['ملاحظات', a.notes], ['عداد الكهرباء', a.elecMeter], ['مبلغ الكهرباء', a.elecBill],
-    ['عداد الماء', a.waterMeter], ['مبلغ الماء', a.waterBill], ['سداد لم يدفع', a.unpaidPayment]
+    ['عداد الماء', a.waterMeter], ['مبلغ الماء', a.waterBill], ['سداد لم يدفع', a.unpaidPayment], ['تقرير ناجز', a.report]
   ] : a.type === 'renew' ? [
-    ['تاريخ التأجير', `${a.rentalFrom || ''} - ${a.rentalTo || ''}`], ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName],
+    ['تاريخ التأجير', `${fmtRentalDate(a.rentalFrom)} - ${fmtRentalDate(a.rentalTo)}`], ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName],
     ['اسم العميل', a.customerName], ['رقم الهوية', a.idNumber], ['رقم الجوال', a.mobile], ['تاريخ الميلاد', a.dob],
     ['قيمة التأجير الحالي', a.saleValueOld], ['قيمة التأجير الجديد', a.saleValueNew], ['طريقة الدفع', a.howToPay], ['التأمين', a.insurance], ['الرسوم', a.feeAmount],
     ['المسوق', a.soldBy], ['ملاحظات', a.notes], ['عداد الكهرباء', a.elecMeter], ['مبلغ الكهرباء', a.elecBill],
-    ['عداد الماء', a.waterMeter], ['مبلغ الماء', a.waterBill], ['سداد لم يدفع', a.unpaidPayment]
+    ['عداد الماء', a.waterMeter], ['مبلغ الماء', a.waterBill], ['سداد لم يدفع', a.unpaidPayment], ['تقرير ناجز', a.report]
   ] : [
     ['السبب', a.reason],
-    ['تاريخ التأجير السابق', `${a.beforeFrom || ''} - ${a.beforeTo || ''}`], ['تاريخ التأجير الجديد', `${a.newFrom || ''} - ${a.newTo || ''}`],
+    ['تاريخ التأجير السابق', `${fmtRentalDate(a.beforeFrom)} - ${fmtRentalDate(a.beforeTo)}`], ['تاريخ التأجير الجديد', `${fmtRentalDate(a.newFrom)} - ${fmtRentalDate(a.newTo)}`],
     ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName], ['العميل السابق', a.oldCustomerName], ['العميل الجديد', a.newCustomerName],
     ['رقم الهوية (جديد)', a.newIdNumber], ['رقم الجوال (جديد)', a.newMobile], ['تاريخ الميلاد', a.dob],
     ['قيمة التأجير السابق', a.saleValueOld], ['قيمة التأجير الجديد', a.saleValueNew],
     ['طريقة الدفع', a.howToPay], ['التأمين', a.insurance], ['السعي', a.services], ['المسوق', a.soldBy],
-    ['عداد الكهرباء', a.elecMeter], ['عداد الماء', a.waterMeter], ['سداد لم يدفع', a.unpaidPayment]
+    ['عداد الكهرباء', a.elecMeter], ['عداد الماء', a.waterMeter], ['سداد لم يدفع', a.unpaidPayment], ['تقرير ناجز', a.report]
   ];
   Swal.fire({
     title: contractDisplayName(a) || 'تفاصيل الاتفاقية', width: 560,
@@ -8144,7 +8156,7 @@ function printContractAgreement(id) {
   const v = x => x || '';
   const th = (ar, en) => `<th><div class="th-flex"><span>${ar}</span><span class="th-en">${en}</span></div></th>`;
   const row = (ar, en, value) => `<tr>${th(ar, en)}<td colspan="2">${v(value)}</td></tr>`;
-  const dateRow = (ar, en, v1, v2) => `<tr>${th(ar, en)}<td>${v(v1)}</td><td>${v(v2)}</td></tr>`;
+  const dateRow = (ar, en, v1, v2) => `<tr>${th(ar, en)}<td>${v(fmtRentalDate(v1))}</td><td>${v(fmtRentalDate(v2))}</td></tr>`;
   const centerBold = text => `<div class="center-bold">${text}</div>`;
 
   let bodyHtml = '';
@@ -8176,6 +8188,7 @@ function printContractAgreement(id) {
     bodyHtml += `<table>
       ${row('سداد لم يدفع', 'Unpaid Payment', a.unpaidPayment)}
       ${row('ملاحظات', 'Notes', a.notes2)}
+      ${row('تقرير ناجز', 'Final Report', a.report)}
     </table>`;
   } else if (a.type === 'renew') {
     bodyHtml += centerBold('اتفاقية تجديد عقد / Agreement Renewal Rental');
@@ -8206,6 +8219,7 @@ function printContractAgreement(id) {
     bodyHtml += `<table>
       ${row('سداد لم يدفع', 'Unpaid Payment', a.unpaidPayment)}
       ${row('ملاحظات', 'Notes', a.notes2)}
+      ${row('تقرير ناجز', 'Final Report', a.report)}
     </table>`;
   } else {
     bodyHtml += centerBold('اتفاقية تعديل بيانات / Agreement Edit Data');
@@ -8240,6 +8254,7 @@ function printContractAgreement(id) {
     bodyHtml += `<table>
       ${row('سداد لم يدفع', 'Unpaid Payment', a.unpaidPayment)}
       ${row('ملاحظات', 'Notes', a.notes2)}
+      ${row('تقرير ناجز', 'Final Report', a.report)}
     </table>`;
   }
 

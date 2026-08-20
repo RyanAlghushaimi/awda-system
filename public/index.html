@@ -7806,7 +7806,7 @@ function cTextarea(id, label) {
   return `<div class="form-group" style="margin-bottom:14px;"><label class="form-label">${label}</label><textarea class="form-control" id="${id}" rows="2"></textarea></div>`;
 }
 function cDatePair(id1, id2, label) {
-  return `<div class="form-group" style="margin-bottom:14px;"><label class="form-label">${label} (يوم/شهر/سنة)</label><div style="display:flex;gap:10px;"><input class="form-control" type="text" id="${id1}" placeholder="يوم/شهر/سنة" maxlength="10" inputmode="numeric" oninput="autoFormatRentalDateInput(this)"><input class="form-control" type="text" id="${id2}" placeholder="يوم/شهر/سنة" maxlength="10" inputmode="numeric" oninput="autoFormatRentalDateInput(this)"></div></div>`;
+  return `<div class="form-group" style="margin-bottom:14px;"><label class="form-label">${label}</label><div style="display:flex;gap:10px;"><input class="form-control" type="text" id="${id1}" placeholder="يوم/شهر/سنة" maxlength="10" inputmode="numeric" oninput="autoFormatRentalDateInput(this)"><input class="form-control" type="text" id="${id2}"></div></div>`;
 }
 // تنسيق تلقائي أثناء الكتابة: يحوّل الأرقام المُدخلة إلى صيغة يوم/شهر/سنة
 // بإضافة الشرطات المائلة تلقائيًا (مثال: كتابة 15082026 تصبح 15/08/2026).
@@ -7977,7 +7977,7 @@ function cancelContractForm() {
 function fillContractForm(a) {
   const setv = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
   if (a.type === 'new') {
-    setv('cn-rentalFrom', fmtRentalDate(a.rentalFrom)); setv('cn-rentalTo', fmtRentalDate(a.rentalTo)); setv('cn-location', a.location);
+    setv('cn-rentalFrom', fmtRentalDate(a.rentalFrom)); setv('cn-rentalTo', a.rentalTo); setv('cn-location', a.location);
     setv('cn-unitName', a.unitName); setv('cn-customerName', a.customerName); setv('cn-idNumber', a.idNumber);
     setv('cn-mobile', a.mobile); setv('cn-dob', a.dob); setv('cn-saleValue', a.saleValue); setv('cn-howToPay', a.howToPay);
     setv('cn-insurance', a.insurance); setv('cn-feeAmount', a.feeAmount); setv('cn-soldBy', a.soldBy); setv('cn-notes', a.notes);
@@ -7985,7 +7985,7 @@ function fillContractForm(a) {
     setv('cn-waterMeter', a.waterMeter); setv('cn-waterBill', a.waterBill); setv('cn-waterNotes', a.waterNotes);
     setv('cn-unpaid', a.unpaidPayment); setv('cn-notes2', a.notes2); setv('cn-report', a.report);
   } else if (a.type === 'renew') {
-    setv('cr-rentalFrom', fmtRentalDate(a.rentalFrom)); setv('cr-rentalTo', fmtRentalDate(a.rentalTo)); setv('cr-location', a.location);
+    setv('cr-rentalFrom', fmtRentalDate(a.rentalFrom)); setv('cr-rentalTo', a.rentalTo); setv('cr-location', a.location);
     setv('cr-unitName', a.unitName); setv('cr-customerName', a.customerName); setv('cr-idNumber', a.idNumber);
     setv('cr-mobile', a.mobile); setv('cr-dob', a.dob); setv('cr-saleValueOld', a.saleValueOld); setv('cr-saleValueNew', a.saleValueNew);
     setv('cr-howToPay', a.howToPay); setv('cr-insurance', a.insurance); setv('cr-feeAmount', a.feeAmount);
@@ -7994,7 +7994,7 @@ function fillContractForm(a) {
     setv('cr-waterMeter', a.waterMeter); setv('cr-waterBill', a.waterBill); setv('cr-waterNotes', a.waterNotes);
     setv('cr-unpaid', a.unpaidPayment); setv('cr-notes2', a.notes2); setv('cr-report', a.report);
   } else {
-    setv('cc-beforeFrom', fmtRentalDate(a.beforeFrom)); setv('cc-beforeTo', fmtRentalDate(a.beforeTo)); setv('cc-newFrom', fmtRentalDate(a.newFrom)); setv('cc-newTo', fmtRentalDate(a.newTo));
+    setv('cc-beforeFrom', fmtRentalDate(a.beforeFrom)); setv('cc-beforeTo', a.beforeTo); setv('cc-newFrom', fmtRentalDate(a.newFrom)); setv('cc-newTo', a.newTo);
     setv('cc-location', a.location); setv('cc-unitName', a.unitName);
     setv('cc-oldCustomerName', a.oldCustomerName); setv('cc-oldIdNumber', a.oldIdNumber); setv('cc-oldMobile', a.oldMobile);
     setv('cc-newCustomerName', a.newCustomerName); setv('cc-newIdNumber', a.newIdNumber); setv('cc-newMobile', a.newMobile);
@@ -8048,7 +8048,7 @@ async function saveContractAgreement(type, evt) {
   let data;
   if (type === 'new') {
     data = {
-      rentalFrom: valDate('cn-rentalFrom'), rentalTo: valDate('cn-rentalTo'), location: val('cn-location'), unitName: val('cn-unitName'),
+      rentalFrom: valDate('cn-rentalFrom'), rentalTo: val('cn-rentalTo'), location: val('cn-location'), unitName: val('cn-unitName'),
       customerName: val('cn-customerName'), idNumber: val('cn-idNumber'), mobile: val('cn-mobile'), dob: val('cn-dob'),
       saleValue: val('cn-saleValue'), howToPay: val('cn-howToPay'), insurance: val('cn-insurance'), feeAmount: val('cn-feeAmount'),
       soldBy: val('cn-soldBy'), notes: val('cn-notes'),
@@ -8057,12 +8057,9 @@ async function saveContractAgreement(type, evt) {
       unpaidPayment: val('cn-unpaid'), notes2: val('cn-notes2'), report: val('cn-report')
     };
     if (!data.customerName) { showToast('يرجى إدخال اسم العميل', 'error'); restoreButton(); return; }
-    if (data.rentalFrom && data.rentalTo && data.rentalFrom > data.rentalTo) {
-      showToast('تاريخ نهاية التأجير لا يمكن أن يكون قبل تاريخ البداية', 'error'); restoreButton(); return;
-    }
   } else if (type === 'renew') {
     data = {
-      rentalFrom: valDate('cr-rentalFrom'), rentalTo: valDate('cr-rentalTo'), location: val('cr-location'), unitName: val('cr-unitName'),
+      rentalFrom: valDate('cr-rentalFrom'), rentalTo: val('cr-rentalTo'), location: val('cr-location'), unitName: val('cr-unitName'),
       customerName: val('cr-customerName'), idNumber: val('cr-idNumber'), mobile: val('cr-mobile'), dob: val('cr-dob'),
       saleValueOld: val('cr-saleValueOld'), saleValueNew: val('cr-saleValueNew'), howToPay: val('cr-howToPay'), insurance: val('cr-insurance'), feeAmount: val('cr-feeAmount'),
       soldBy: val('cr-soldBy'), notes: val('cr-notes'),
@@ -8071,12 +8068,9 @@ async function saveContractAgreement(type, evt) {
       unpaidPayment: val('cr-unpaid'), notes2: val('cr-notes2'), report: val('cr-report')
     };
     if (!data.customerName) { showToast('يرجى إدخال اسم العميل', 'error'); restoreButton(); return; }
-    if (data.rentalFrom && data.rentalTo && data.rentalFrom > data.rentalTo) {
-      showToast('تاريخ نهاية التأجير لا يمكن أن يكون قبل تاريخ البداية', 'error'); restoreButton(); return;
-    }
   } else {
     data = {
-      beforeFrom: valDate('cc-beforeFrom'), beforeTo: valDate('cc-beforeTo'), newFrom: valDate('cc-newFrom'), newTo: valDate('cc-newTo'),
+      beforeFrom: valDate('cc-beforeFrom'), beforeTo: val('cc-beforeTo'), newFrom: valDate('cc-newFrom'), newTo: val('cc-newTo'),
       location: val('cc-location'), unitName: val('cc-unitName'),
       oldCustomerName: val('cc-oldCustomerName'), oldIdNumber: val('cc-oldIdNumber'), oldMobile: val('cc-oldMobile'),
       newCustomerName: val('cc-newCustomerName'), newIdNumber: val('cc-newIdNumber'), newMobile: val('cc-newMobile'),
@@ -8088,12 +8082,6 @@ async function saveContractAgreement(type, evt) {
       unpaidPayment: val('cc-unpaid'), notes2: val('cc-notes2'), report: val('cc-report')
     };
     if (!data.newCustomerName) { showToast('يرجى إدخال اسم العميل الجديد', 'error'); restoreButton(); return; }
-    if (data.beforeFrom && data.beforeTo && data.beforeFrom > data.beforeTo) {
-      showToast('تاريخ نهاية الفترة (قبل) لا يمكن أن يكون قبل تاريخ بدايتها', 'error'); restoreButton(); return;
-    }
-    if (data.newFrom && data.newTo && data.newFrom > data.newTo) {
-      showToast('تاريخ نهاية الفترة الجديدة لا يمكن أن يكون قبل تاريخ بدايتها', 'error'); restoreButton(); return;
-    }
   }
   let wasDocumented = false;
   let displayName = (type === 'new' || type === 'renew') ? data.customerName : data.newCustomerName;
@@ -8147,20 +8135,20 @@ function editContractAgreement(id) {
 function viewContractAgreement(id) {
   const a = appData.contracts.agreements.find(x => x.id === id); if (!a) return;
   const rows = a.type === 'new' ? [
-    ['تاريخ التأجير', `${fmtRentalDate(a.rentalFrom)} - ${fmtRentalDate(a.rentalTo)}`], ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName],
+    ['تاريخ التأجير', `${fmtRentalDate(a.rentalFrom)} - ${a.rentalTo || ''}`], ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName],
     ['اسم العميل', a.customerName], ['رقم الهوية', a.idNumber], ['رقم الجوال', a.mobile], ['تاريخ الميلاد', a.dob],
     ['قيمة التأجير', a.saleValue], ['طريقة الدفع', a.howToPay], ['التأمين', a.insurance], ['الرسوم', a.feeAmount],
     ['المسوق', a.soldBy], ['ملاحظات', a.notes], ['عداد الكهرباء', a.elecMeter], ['مبلغ الكهرباء', a.elecBill],
     ['عداد الماء', a.waterMeter], ['مبلغ الماء', a.waterBill], ['سداد لم يدفع', a.unpaidPayment], ['تقرير ناجز', a.report]
   ] : a.type === 'renew' ? [
-    ['تاريخ التأجير', `${fmtRentalDate(a.rentalFrom)} - ${fmtRentalDate(a.rentalTo)}`], ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName],
+    ['تاريخ التأجير', `${fmtRentalDate(a.rentalFrom)} - ${a.rentalTo || ''}`], ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName],
     ['اسم العميل', a.customerName], ['رقم الهوية', a.idNumber], ['رقم الجوال', a.mobile], ['تاريخ الميلاد', a.dob],
     ['قيمة التأجير الحالي', a.saleValueOld], ['قيمة التأجير الجديد', a.saleValueNew], ['طريقة الدفع', a.howToPay], ['التأمين', a.insurance], ['الرسوم', a.feeAmount],
     ['المسوق', a.soldBy], ['ملاحظات', a.notes], ['عداد الكهرباء', a.elecMeter], ['مبلغ الكهرباء', a.elecBill],
     ['عداد الماء', a.waterMeter], ['مبلغ الماء', a.waterBill], ['سداد لم يدفع', a.unpaidPayment], ['تقرير ناجز', a.report]
   ] : [
     ['السبب', a.reason],
-    ['تاريخ التأجير السابق', `${fmtRentalDate(a.beforeFrom)} - ${fmtRentalDate(a.beforeTo)}`], ['تاريخ التأجير الجديد', `${fmtRentalDate(a.newFrom)} - ${fmtRentalDate(a.newTo)}`],
+    ['تاريخ التأجير السابق', `${fmtRentalDate(a.beforeFrom)} - ${a.beforeTo || ''}`], ['تاريخ التأجير الجديد', `${fmtRentalDate(a.newFrom)} - ${a.newTo || ''}`],
     ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName], ['العميل السابق', a.oldCustomerName], ['العميل الجديد', a.newCustomerName],
     ['رقم الهوية (جديد)', a.newIdNumber], ['رقم الجوال (جديد)', a.newMobile], ['تاريخ الميلاد', a.dob],
     ['قيمة التأجير السابق', a.saleValueOld], ['قيمة التأجير الجديد', a.saleValueNew],
@@ -8178,7 +8166,7 @@ function printContractAgreement(id) {
   const v = x => x || '';
   const th = (ar, en) => `<th><div class="th-flex"><span>${ar}</span><span class="th-en">${en}</span></div></th>`;
   const row = (ar, en, value) => `<tr>${th(ar, en)}<td colspan="2">${v(value)}</td></tr>`;
-  const dateRow = (ar, en, v1, v2) => `<tr>${th(ar, en)}<td>${v(fmtRentalDate(v1))}</td><td>${v(fmtRentalDate(v2))}</td></tr>`;
+  const dateRow = (ar, en, v1, v2) => `<tr>${th(ar, en)}<td>${v(fmtRentalDate(v1))}</td><td>${v(v2)}</td></tr>`;
   const centerBold = text => `<div class="center-bold">${text}</div>`;
 
   let bodyHtml = '';

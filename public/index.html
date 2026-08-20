@@ -7835,7 +7835,9 @@ function currentUserDisplayName() {
 function canChangeSoldBy() {
   if (!currentUser) return true;
   return currentUser.role === 'مدير' || currentUser.role === 'مشرف' ||
-    currentUser.name === 'حماد الحماد' || currentUser.username === 'حماد الحماد';
+    currentUser.name === 'حماد الحماد' || currentUser.username === 'حماد الحماد' ||
+    currentUser.name === 'نادر عبدالتواب' || currentUser.username === 'نادر عبدالتواب' ||
+    !!currentUser.canChangeSoldBy;
 }
 // دالة مستقلة لتحديد من يرى كل الاتفاقيات غير الموثقة (بدل الاعتماد على
 // canChangeSoldBy رغم تطابق قائمة الأدوار حالياً) — لتفادي تغيّر أحد الغرضين
@@ -7843,7 +7845,9 @@ function canChangeSoldBy() {
 function canViewAllUndocumentedAgreements() {
   if (!currentUser) return true;
   return currentUser.role === 'مدير' || currentUser.role === 'مشرف' ||
-    currentUser.name === 'حماد الحماد' || currentUser.username === 'حماد الحماد';
+    currentUser.name === 'حماد الحماد' || currentUser.username === 'حماد الحماد' ||
+    currentUser.name === 'نادر عبدالتواب' || currentUser.username === 'نادر عبدالتواب' ||
+    !!currentUser.canViewAllUndocAgreements;
 }
 function cSoldByField(id) {
   const allowChange = canChangeSoldBy();
@@ -8750,7 +8754,21 @@ function usrToggleSection(secKey) {
   sec.subs.forEach(s => { const subCb = document.getElementById('perm-sub-'+s.id); if (subCb) subCb.checked = secCb.checked; });
 }
 function usrPermsTreeHTML(user = null) {
-  return SECTION_TREE.map(sec => {
+  const soldByChecked = user ? !!user.canChangeSoldBy : false;
+  const viewAllUndocChecked = user ? !!user.canViewAllUndocAgreements : false;
+  const specialPermsHTML = `
+    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;background:rgba(212,175,55,0.06);">
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px;"><i class="fas fa-file-signature"></i> صلاحيات خاصة — إدارة العقود Contract Management</div>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;padding-right:4px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer;">
+          <input type="checkbox" id="usr-perm-soldby" ${soldByChecked?'checked':''} style="width:14px;height:14px;"> تغيير اسم المسوق Sold By في الاتفاقيات
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer;">
+          <input type="checkbox" id="usr-perm-viewalldoc" ${viewAllUndocChecked?'checked':''} style="width:14px;height:14px;"> رؤية جميع الاتفاقيات الغير موثقة
+        </label>
+      </div>
+    </div>`;
+  return specialPermsHTML + SECTION_TREE.map(sec => {
     const secChecked = user ? !!(user.perms && user.perms[sec.key]) : true;
     const secViewOnly = user ? !!(user.viewOnlySections && user.viewOnlySections[sec.key]) : false;
     return `
@@ -8782,7 +8800,9 @@ function collectPermsFromForm() {
     viewOnlySections[sec.key] = document.getElementById('perm-viewonly-'+sec.key)?.checked || false;
     sec.subs.forEach(s => { permsSub[s.id] = document.getElementById('perm-sub-'+s.id)?.checked || false; });
   });
-  return { perms, permsSub, viewOnlySections };
+  const canChangeSoldByPerm = document.getElementById('usr-perm-soldby')?.checked || false;
+  const canViewAllUndocAgreements = document.getElementById('usr-perm-viewalldoc')?.checked || false;
+  return { perms, permsSub, viewOnlySections, canChangeSoldByPerm, canViewAllUndocAgreements };
 }
 function renderUsersEntryPage() {
   ensureUsersData(); ensureEmployeesData();
@@ -8806,7 +8826,7 @@ async function addUser() {
   if (!username) { showToast('يرجى إدخال اسم المستخدم', 'error'); return; }
   if (!password) { showToast('يرجى إدخال كلمة المرور', 'error'); return; }
   if (appData.users.list.find(u => u.username === username)) { showToast('اسم المستخدم مستخدم بالفعل', 'error'); return; }
-  const { perms, permsSub, viewOnlySections } = collectPermsFromForm();
+  const { perms, permsSub, viewOnlySections, canChangeSoldByPerm, canViewAllUndocAgreements } = collectPermsFromForm();
   const user = {
     id: uid(), name, username,
     passwordHash: await hashPassword(password),
@@ -8815,6 +8835,7 @@ async function addUser() {
     status: document.getElementById('usr-status').value,
     viewOnly: document.getElementById('usr-viewonly').checked,
     perms, permsSub, viewOnlySections,
+    canChangeSoldBy: canChangeSoldByPerm, canViewAllUndocAgreements,
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
   };
   appData.users.list.push(user);
@@ -8925,7 +8946,9 @@ function editUserPerms(id) {
     preConfirm: () => ({ role: document.getElementById('editUserRoleSelect').value, viewOnly: document.getElementById('editUserViewOnly').checked, ...collectPermsFromForm() })
   }).then(r => {
     if (r.isConfirmed) {
-      u.role = r.value.role; u.viewOnly = r.value.viewOnly; u.perms = r.value.perms; u.permsSub = r.value.permsSub; u.viewOnlySections = r.value.viewOnlySections; u.updatedAt = new Date().toISOString();
+      u.role = r.value.role; u.viewOnly = r.value.viewOnly; u.perms = r.value.perms; u.permsSub = r.value.permsSub; u.viewOnlySections = r.value.viewOnlySections;
+      u.canChangeSoldBy = r.value.canChangeSoldByPerm; u.canViewAllUndocAgreements = r.value.canViewAllUndocAgreements;
+      u.updatedAt = new Date().toISOString();
       save(); showToast('تم تحديث الصلاحيات والدور', 'success');
       if (currentUser && currentUser.id === u.id) { currentUser = u; applyUserPermissions(); }
     }

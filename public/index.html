@@ -7806,7 +7806,28 @@ function cTextarea(id, label) {
   return `<div class="form-group" style="margin-bottom:14px;"><label class="form-label">${label}</label><textarea class="form-control" id="${id}" rows="2"></textarea></div>`;
 }
 function cDatePair(id1, id2, label) {
-  return `<div class="form-group" style="margin-bottom:14px;"><label class="form-label">${label}</label><div style="display:flex;gap:10px;"><input class="form-control" type="date" id="${id1}"><input class="form-control" type="text" id="${id2}"></div></div>`;
+  return `<div class="form-group" style="margin-bottom:14px;"><label class="form-label">${label} (يوم/شهر/سنة)</label><div style="display:flex;gap:10px;"><input class="form-control" type="text" id="${id1}" placeholder="يوم/شهر/سنة" maxlength="10" inputmode="numeric" oninput="autoFormatRentalDateInput(this)"><input class="form-control" type="text" id="${id2}" placeholder="يوم/شهر/سنة" maxlength="10" inputmode="numeric" oninput="autoFormatRentalDateInput(this)"></div></div>`;
+}
+// تنسيق تلقائي أثناء الكتابة: يحوّل الأرقام المُدخلة إلى صيغة يوم/شهر/سنة
+// بإضافة الشرطات المائلة تلقائيًا (مثال: كتابة 15082026 تصبح 15/08/2026).
+function autoFormatRentalDateInput(el) {
+  const digits = el.value.replace(/\D/g, '').slice(0, 8);
+  let out = digits;
+  if (digits.length > 4) out = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+  else if (digits.length > 2) out = digits.slice(0, 2) + '/' + digits.slice(2);
+  el.value = out;
+}
+// تحويل صيغة الإدخال (يوم/شهر/سنة أو سنة/شهر/يوم) إلى صيغة ISO (yyyy-mm-dd)
+// للتخزين الداخلي، حتى تبقى مقارنات التحقق من صحة نطاقات التاريخ تعمل بشكل
+// صحيح (المقارنة النصية بصيغة ISO فقط هي التي تُرتَّب تصاعديًا بشكل سليم).
+function parseRentalDateInput(str) {
+  if (!str) return '';
+  str = String(str).trim();
+  let m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  m = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  return str;
 }
 function currentUserDisplayName() {
   return (currentUser && currentUser.name) || '';
@@ -7861,6 +7882,7 @@ function renderContractsEntryPage() {
     cField('cn-insurance', 'التأمين Insurance') +
     cField('cn-feeAmount', 'الرسوم Fee Amount') +
     cSoldByField('cn-soldBy') +
+    cTextarea('cn-report', 'تقرير ناجز Najiz Report') +
     cTextarea('cn-notes', 'ملاحظات Notes');
   document.getElementById('contractNewReceiveFields').innerHTML =
     cField('cn-elecMeter', 'رقم عداد الكهرباء Electricity Meter Number') +
@@ -7871,8 +7893,7 @@ function renderContractsEntryPage() {
     cTextarea('cn-waterNotes', 'ملاحظات Notes');
   document.getElementById('contractNewFinalFields').innerHTML =
     cField('cn-unpaid', 'سداد لم يدفع Unpaid Payment') +
-    cTextarea('cn-notes2', 'ملاحظات Notes') +
-    cTextarea('cn-report', 'تقرير ناجز Final Report');
+    cTextarea('cn-notes2', 'ملاحظات Notes');
 
   document.getElementById('contractRenewFields').innerHTML =
     cDatePair('cr-rentalFrom', 'cr-rentalTo', 'تاريخ التأجير Rental Date') +
@@ -7888,6 +7909,7 @@ function renderContractsEntryPage() {
     cField('cr-insurance', 'التأمين Insurance') +
     cField('cr-feeAmount', 'الرسوم Fee Amount') +
     cSoldByField('cr-soldBy') +
+    cTextarea('cr-report', 'تقرير ناجز Najiz Report') +
     cTextarea('cr-notes', 'ملاحظات Notes');
   document.getElementById('contractRenewReceiveFields').innerHTML =
     cField('cr-elecMeter', 'رقم عداد الكهرباء Electricity Meter Number') +
@@ -7898,8 +7920,7 @@ function renderContractsEntryPage() {
     cTextarea('cr-waterNotes', 'ملاحظات Notes');
   document.getElementById('contractRenewFinalFields').innerHTML =
     cField('cr-unpaid', 'سداد لم يدفع Unpaid Payment') +
-    cTextarea('cr-notes2', 'ملاحظات Notes') +
-    cTextarea('cr-report', 'تقرير ناجز Final Report');
+    cTextarea('cr-notes2', 'ملاحظات Notes');
 
   document.getElementById('contractChangeFields').innerHTML =
     cField('cc-reason', 'السبب Reason') +
@@ -7919,7 +7940,8 @@ function renderContractsEntryPage() {
     cField('cc-howToPay', 'طريقة الدفع How to Pay') +
     cField('cc-insurance', 'التأمين Insurance') +
     cField('cc-services', 'السعي Services and Pursuit') +
-    cSoldByField('cc-soldBy');
+    cSoldByField('cc-soldBy') +
+    cTextarea('cc-report', 'تقرير ناجز Najiz Report');
   document.getElementById('contractChangeReceiveFields').innerHTML =
     cField('cc-elecMeter', 'رقم عداد الكهرباء Electricity Meter Number') +
     cField('cc-elecBill', 'المبلغ Bill') +
@@ -7929,8 +7951,7 @@ function renderContractsEntryPage() {
     cTextarea('cc-waterNotes', 'ملاحظات Notes');
   document.getElementById('contractChangeFinalFields').innerHTML =
     cField('cc-unpaid', 'سداد لم يدفع Unpaid Payment') +
-    cTextarea('cc-notes2', 'ملاحظات Notes') +
-    cTextarea('cc-report', 'تقرير ناجز Final Report');
+    cTextarea('cc-notes2', 'ملاحظات Notes');
 
   ['cn-soldBy', 'cr-soldBy', 'cc-soldBy'].forEach(id => { const el = document.getElementById(id); if (el) el.value = currentUserDisplayName(); });
 
@@ -7956,7 +7977,7 @@ function cancelContractForm() {
 function fillContractForm(a) {
   const setv = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
   if (a.type === 'new') {
-    setv('cn-rentalFrom', a.rentalFrom); setv('cn-rentalTo', a.rentalTo); setv('cn-location', a.location);
+    setv('cn-rentalFrom', fmtRentalDate(a.rentalFrom)); setv('cn-rentalTo', fmtRentalDate(a.rentalTo)); setv('cn-location', a.location);
     setv('cn-unitName', a.unitName); setv('cn-customerName', a.customerName); setv('cn-idNumber', a.idNumber);
     setv('cn-mobile', a.mobile); setv('cn-dob', a.dob); setv('cn-saleValue', a.saleValue); setv('cn-howToPay', a.howToPay);
     setv('cn-insurance', a.insurance); setv('cn-feeAmount', a.feeAmount); setv('cn-soldBy', a.soldBy); setv('cn-notes', a.notes);
@@ -7964,7 +7985,7 @@ function fillContractForm(a) {
     setv('cn-waterMeter', a.waterMeter); setv('cn-waterBill', a.waterBill); setv('cn-waterNotes', a.waterNotes);
     setv('cn-unpaid', a.unpaidPayment); setv('cn-notes2', a.notes2); setv('cn-report', a.report);
   } else if (a.type === 'renew') {
-    setv('cr-rentalFrom', a.rentalFrom); setv('cr-rentalTo', a.rentalTo); setv('cr-location', a.location);
+    setv('cr-rentalFrom', fmtRentalDate(a.rentalFrom)); setv('cr-rentalTo', fmtRentalDate(a.rentalTo)); setv('cr-location', a.location);
     setv('cr-unitName', a.unitName); setv('cr-customerName', a.customerName); setv('cr-idNumber', a.idNumber);
     setv('cr-mobile', a.mobile); setv('cr-dob', a.dob); setv('cr-saleValueOld', a.saleValueOld); setv('cr-saleValueNew', a.saleValueNew);
     setv('cr-howToPay', a.howToPay); setv('cr-insurance', a.insurance); setv('cr-feeAmount', a.feeAmount);
@@ -7973,7 +7994,7 @@ function fillContractForm(a) {
     setv('cr-waterMeter', a.waterMeter); setv('cr-waterBill', a.waterBill); setv('cr-waterNotes', a.waterNotes);
     setv('cr-unpaid', a.unpaidPayment); setv('cr-notes2', a.notes2); setv('cr-report', a.report);
   } else {
-    setv('cc-beforeFrom', a.beforeFrom); setv('cc-beforeTo', a.beforeTo); setv('cc-newFrom', a.newFrom); setv('cc-newTo', a.newTo);
+    setv('cc-beforeFrom', fmtRentalDate(a.beforeFrom)); setv('cc-beforeTo', fmtRentalDate(a.beforeTo)); setv('cc-newFrom', fmtRentalDate(a.newFrom)); setv('cc-newTo', fmtRentalDate(a.newTo));
     setv('cc-location', a.location); setv('cc-unitName', a.unitName);
     setv('cc-oldCustomerName', a.oldCustomerName); setv('cc-oldIdNumber', a.oldIdNumber); setv('cc-oldMobile', a.oldMobile);
     setv('cc-newCustomerName', a.newCustomerName); setv('cc-newIdNumber', a.newIdNumber); setv('cc-newMobile', a.newMobile);
@@ -8023,10 +8044,11 @@ async function saveContractAgreement(type, evt) {
 
   ensureContractsData();
   const val = id => (document.getElementById(id)?.value || '').trim();
+  const valDate = id => parseRentalDateInput(val(id));
   let data;
   if (type === 'new') {
     data = {
-      rentalFrom: val('cn-rentalFrom'), rentalTo: val('cn-rentalTo'), location: val('cn-location'), unitName: val('cn-unitName'),
+      rentalFrom: valDate('cn-rentalFrom'), rentalTo: valDate('cn-rentalTo'), location: val('cn-location'), unitName: val('cn-unitName'),
       customerName: val('cn-customerName'), idNumber: val('cn-idNumber'), mobile: val('cn-mobile'), dob: val('cn-dob'),
       saleValue: val('cn-saleValue'), howToPay: val('cn-howToPay'), insurance: val('cn-insurance'), feeAmount: val('cn-feeAmount'),
       soldBy: val('cn-soldBy'), notes: val('cn-notes'),
@@ -8040,7 +8062,7 @@ async function saveContractAgreement(type, evt) {
     }
   } else if (type === 'renew') {
     data = {
-      rentalFrom: val('cr-rentalFrom'), rentalTo: val('cr-rentalTo'), location: val('cr-location'), unitName: val('cr-unitName'),
+      rentalFrom: valDate('cr-rentalFrom'), rentalTo: valDate('cr-rentalTo'), location: val('cr-location'), unitName: val('cr-unitName'),
       customerName: val('cr-customerName'), idNumber: val('cr-idNumber'), mobile: val('cr-mobile'), dob: val('cr-dob'),
       saleValueOld: val('cr-saleValueOld'), saleValueNew: val('cr-saleValueNew'), howToPay: val('cr-howToPay'), insurance: val('cr-insurance'), feeAmount: val('cr-feeAmount'),
       soldBy: val('cr-soldBy'), notes: val('cr-notes'),
@@ -8054,7 +8076,7 @@ async function saveContractAgreement(type, evt) {
     }
   } else {
     data = {
-      beforeFrom: val('cc-beforeFrom'), beforeTo: val('cc-beforeTo'), newFrom: val('cc-newFrom'), newTo: val('cc-newTo'),
+      beforeFrom: valDate('cc-beforeFrom'), beforeTo: valDate('cc-beforeTo'), newFrom: valDate('cc-newFrom'), newTo: valDate('cc-newTo'),
       location: val('cc-location'), unitName: val('cc-unitName'),
       oldCustomerName: val('cc-oldCustomerName'), oldIdNumber: val('cc-oldIdNumber'), oldMobile: val('cc-oldMobile'),
       newCustomerName: val('cc-newCustomerName'), newIdNumber: val('cc-newIdNumber'), newMobile: val('cc-newMobile'),

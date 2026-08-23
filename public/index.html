@@ -1493,6 +1493,17 @@ body.view-only-mode .vac-status-btn {
       </span>
     </button>
 
+    <button class="btn"
+      style="width:100%; padding:22px 16px; font-size:15px; line-height:1.8; background:var(--info);color:#fff;"
+      onclick="showContractForm('transfer')">
+      <i class="fas fa-people-arrows"></i>
+      اتفاقية تأجير للغير
+      <br>
+      <span style="font-size:12px;opacity:.85;">
+        Agreement Rental To Third Party
+      </span>
+    </button>
+
   </div>
 </div>
 
@@ -1537,6 +1548,20 @@ body.view-only-mode .vac-status-btn {
             <button class="btn btn-outline" onclick="cancelContractForm()">إلغاء</button>
           </div>
         </div>
+
+        <!-- FORM: TRANSFER RENTAL -->
+        <div class="card" id="contractFormTransfer" style="display:none;">
+          <div style="text-align:center;font-weight:700;font-size:16px;margin-bottom:18px;">اتفاقية تأجير للغير / Agreement Rental To Third Party</div>
+          <div id="contractTransferFields"></div>
+          <div id="contractTransferReceiveFields"></div>
+          <div id="contractTransferFinalFields" style="margin-top:14px;"></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;margin-top:30px;text-align:center;flex-wrap:wrap;">
+          </div>
+          <div style="display:flex;gap:10px;margin-top:24px;">
+            <button class="btn btn-primary" onclick="saveContractAgreement('transfer', event)"><i class="fas fa-save"></i> حفظ الاتفاقية</button>
+            <button class="btn btn-outline" onclick="cancelContractForm()">إلغاء</button>
+          </div>
+        </div>
       </div>
 
       <!-- CONTRACTS: UNDOCUMENTED -->
@@ -1554,6 +1579,7 @@ body.view-only-mode .vac-status-btn {
               <option value="new">اتفاقية تأجير جديد</option>
               <option value="renew">اتفاقية تجديد عقد</option>
               <option value="change">اتفاقية تعديل بيانات</option>
+              <option value="transfer">اتفاقية تأجير للغير</option>
             </select>
             <select class="form-control" style="width:auto;" id="contractsUndocMonthFilter" onchange="renderContractsUndocumented()"><option value="">كل الأشهر</option></select>
             <button class="btn btn-outline btn-sm" onclick="clearContractFilter('contractsUndoc')"><i class="fas fa-filter-circle-xmark"></i> إزالة الفلاتر</button>
@@ -1577,6 +1603,7 @@ body.view-only-mode .vac-status-btn {
               <option value="new">اتفاقية تأجير جديد</option>
               <option value="renew">اتفاقية تجديد عقد</option>
               <option value="change">اتفاقية تعديل بيانات</option>
+              <option value="transfer">اتفاقية تأجير للغير</option>
             </select>
             <select class="form-control" style="width:auto;" id="contractsDocMonthFilter" onchange="renderContractsDocumented()"><option value="">كل الأشهر</option></select>
             <button class="btn btn-outline btn-sm" onclick="clearContractFilter('contractsDoc')"><i class="fas fa-filter-circle-xmark"></i> إزالة الفلاتر</button>
@@ -7776,7 +7803,7 @@ function logContracts(action, details, before, after) {
     }).catch(e => console.error('تعذر حفظ سجل مسودة العقود:', e));
   }
 }
-function contractDisplayName(a) { return a.type === 'new' ? a.customerName : (a.type === 'renew' ? a.customerName : a.newCustomerName); }
+function contractDisplayName(a) { return a.type === 'new' ? a.customerName : (a.type === 'renew' ? a.customerName : (a.type === 'transfer' ? a.tenantName : a.newCustomerName)); }
 function contractMonthKey(a) {
   if (!a.createdAt) return '';
   const d = new Date(a.createdAt);
@@ -7957,19 +7984,50 @@ function renderContractsEntryPage() {
     cField('cc-unpaid', 'سداد لم يدفع Unpaid Payment') +
     cTextarea('cc-notes2', 'ملاحظات Notes');
 
-  ['cn-soldBy', 'cr-soldBy', 'cc-soldBy'].forEach(id => { const el = document.getElementById(id); if (el) el.value = currentUserDisplayName(); });
+  document.getElementById('contractTransferFields').innerHTML =
+    cDatePair('ct-rentalFrom', 'ct-rentalTo', 'تاريخ التأجير Rental Date') +
+    cField('ct-unitName', 'اسم الوحدة Unit Name') +
+    cField('ct-landlordName', 'اسم المؤجر') +
+    cField('ct-landlordIdNumber', 'رقم الهوية Number ID') +
+    cField('ct-landlordMobile', 'رقم الجوال Mobile Number') +
+    cField('ct-landlordDob', 'تاريخ الميلاد Date of Birth') +
+    cField('ct-tenantName', 'اسم المستأجر') +
+    cField('ct-tenantIdNumber', 'رقم الهوية Number ID') +
+    cField('ct-tenantMobile', 'رقم الجوال Mobile Number') +
+    cField('ct-tenantDob', 'تاريخ الميلاد Date of Birth') +
+    cField('ct-saleValue', 'قيمة التأجير Sale Value') +
+    cField('ct-howToPay', 'طريقة الدفع How to Pay') +
+    cField('ct-insurance', 'التأمين Insurance') +
+    cField('ct-feeAmount', 'الرسوم Fee Amount') +
+    cSoldByField('ct-soldBy') +
+    cTextarea('ct-report', 'تقرير ناجز Najiz Report') +
+    cTextarea('ct-notes', 'ملاحظات Notes');
+  document.getElementById('contractTransferReceiveFields').innerHTML =
+    cField('ct-elecMeter', 'رقم عداد الكهرباء Electricity Meter Number') +
+    cField('ct-elecBill', 'المبلغ Bill') +
+    cTextarea('ct-elecNotes', 'ملاحظات Notes') +
+    cField('ct-waterMeter', 'رقم عداد الماء Water Meter Number') +
+    cField('ct-waterBill', 'المبلغ Bill') +
+    cTextarea('ct-waterNotes', 'ملاحظات Notes');
+  document.getElementById('contractTransferFinalFields').innerHTML =
+    cField('ct-unpaid', 'سداد لم يدفع Unpaid Payment') +
+    cTextarea('ct-notes2', 'ملاحظات Notes');
+
+  ['cn-soldBy', 'cr-soldBy', 'cc-soldBy', 'ct-soldBy'].forEach(id => { const el = document.getElementById(id); if (el) el.value = currentUserDisplayName(); });
 
   contractEditingId = null;
   document.getElementById('contractsTypeChooser').style.display = '';
   document.getElementById('contractFormNew').style.display = 'none';
   document.getElementById('contractFormRenew').style.display = 'none';
   document.getElementById('contractFormChange').style.display = 'none';
+  document.getElementById('contractFormTransfer').style.display = 'none';
 }
 function showContractForm(type) {
   document.getElementById('contractsTypeChooser').style.display = 'none';
   document.getElementById('contractFormNew').style.display = type === 'new' ? '' : 'none';
   document.getElementById('contractFormRenew').style.display = type === 'renew' ? '' : 'none';
   document.getElementById('contractFormChange').style.display = type === 'change' ? '' : 'none';
+  document.getElementById('contractFormTransfer').style.display = type === 'transfer' ? '' : 'none';
 }
 function cancelContractForm() {
   contractEditingId = null;
@@ -7977,6 +8035,7 @@ function cancelContractForm() {
   document.getElementById('contractFormNew').style.display = 'none';
   document.getElementById('contractFormRenew').style.display = 'none';
   document.getElementById('contractFormChange').style.display = 'none';
+  document.getElementById('contractFormTransfer').style.display = 'none';
 }
 function fillContractForm(a) {
   const setv = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
@@ -7997,6 +8056,18 @@ function fillContractForm(a) {
     setv('cr-elecMeter', a.elecMeter); setv('cr-elecBill', a.elecBill); setv('cr-elecNotes', a.elecNotes);
     setv('cr-waterMeter', a.waterMeter); setv('cr-waterBill', a.waterBill); setv('cr-waterNotes', a.waterNotes);
     setv('cr-unpaid', a.unpaidPayment); setv('cr-notes2', a.notes2); setv('cr-report', a.report);
+  } else if (a.type === 'transfer') {
+    setv('ct-rentalFrom', fmtRentalDate(a.rentalFrom)); setv('ct-rentalTo', a.rentalTo);
+    setv('ct-unitName', a.unitName);
+    setv('ct-landlordName', a.landlordName); setv('ct-landlordIdNumber', a.landlordIdNumber);
+    setv('ct-landlordMobile', a.landlordMobile); setv('ct-landlordDob', a.landlordDob);
+    setv('ct-tenantName', a.tenantName); setv('ct-tenantIdNumber', a.tenantIdNumber);
+    setv('ct-tenantMobile', a.tenantMobile); setv('ct-tenantDob', a.tenantDob);
+    setv('ct-saleValue', a.saleValue); setv('ct-howToPay', a.howToPay); setv('ct-insurance', a.insurance);
+    setv('ct-feeAmount', a.feeAmount); setv('ct-soldBy', a.soldBy); setv('ct-report', a.report); setv('ct-notes', a.notes);
+    setv('ct-elecMeter', a.elecMeter); setv('ct-elecBill', a.elecBill); setv('ct-elecNotes', a.elecNotes);
+    setv('ct-waterMeter', a.waterMeter); setv('ct-waterBill', a.waterBill); setv('ct-waterNotes', a.waterNotes);
+    setv('ct-unpaid', a.unpaidPayment); setv('ct-notes2', a.notes2);
   } else {
     setv('cc-beforeFrom', fmtRentalDate(a.beforeFrom)); setv('cc-beforeTo', a.beforeTo); setv('cc-newFrom', fmtRentalDate(a.newFrom)); setv('cc-newTo', a.newTo);
     setv('cc-location', a.location); setv('cc-unitName', a.unitName);
@@ -8072,6 +8143,18 @@ async function saveContractAgreement(type, evt) {
       unpaidPayment: val('cr-unpaid'), notes2: val('cr-notes2'), report: val('cr-report')
     };
     if (!data.customerName) { showToast('يرجى إدخال اسم العميل', 'error'); restoreButton(); return; }
+  } else if (type === 'transfer') {
+    data = {
+      rentalFrom: valDate('ct-rentalFrom'), rentalTo: val('ct-rentalTo'), unitName: val('ct-unitName'),
+      landlordName: val('ct-landlordName'), landlordIdNumber: val('ct-landlordIdNumber'), landlordMobile: val('ct-landlordMobile'), landlordDob: val('ct-landlordDob'),
+      tenantName: val('ct-tenantName'), tenantIdNumber: val('ct-tenantIdNumber'), tenantMobile: val('ct-tenantMobile'), tenantDob: val('ct-tenantDob'),
+      saleValue: val('ct-saleValue'), howToPay: val('ct-howToPay'), insurance: val('ct-insurance'), feeAmount: val('ct-feeAmount'),
+      soldBy: val('ct-soldBy'), notes: val('ct-notes'), report: val('ct-report'),
+      elecMeter: val('ct-elecMeter'), elecBill: val('ct-elecBill'), elecNotes: val('ct-elecNotes'),
+      waterMeter: val('ct-waterMeter'), waterBill: val('ct-waterBill'), waterNotes: val('ct-waterNotes'),
+      unpaidPayment: val('ct-unpaid'), notes2: val('ct-notes2')
+    };
+    if (!data.tenantName) { showToast('يرجى إدخال اسم المستأجر', 'error'); restoreButton(); return; }
   } else {
     data = {
       beforeFrom: valDate('cc-beforeFrom'), beforeTo: val('cc-beforeTo'), newFrom: valDate('cc-newFrom'), newTo: val('cc-newTo'),
@@ -8088,7 +8171,7 @@ async function saveContractAgreement(type, evt) {
     if (!data.newCustomerName) { showToast('يرجى إدخال اسم العميل الجديد', 'error'); restoreButton(); return; }
   }
   let wasDocumented = false;
-  let displayName = (type === 'new' || type === 'renew') ? data.customerName : data.newCustomerName;
+  let displayName = (type === 'new' || type === 'renew') ? data.customerName : (type === 'transfer' ? data.tenantName : data.newCustomerName);
   let agreementForRepo = null;
   let isEdit = false;
   if (contractEditingId) {
@@ -8103,7 +8186,7 @@ async function saveContractAgreement(type, evt) {
   } else {
     const agreement = { id: uid(), type, status: 'undocumented', createdBy: currentUser ? currentUser.name : 'غير معروف', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...data };
     appData.contracts.agreements.push(agreement);
-    logContracts('add', `تمت إضافة اتفاقية (${type === 'new' ? 'تأجير جديد' : (type === 'renew' ? 'تجديد عقد' : 'تغيير مؤجر')}): ${displayName || '—'}`, null, agreement);
+    logContracts('add', `تمت إضافة اتفاقية (${type === 'new' ? 'تأجير جديد' : (type === 'renew' ? 'تجديد عقد' : (type === 'transfer' ? 'تأجير للغير' : 'تغيير مؤجر'))}): ${displayName || '—'}`, null, agreement);
     agreementForRepo = agreement;
   }
   // استجابة فورية (Optimistic UI): لا ننتظر اكتمال الحفظ قبل إخبار المستخدم
@@ -8148,6 +8231,13 @@ function viewContractAgreement(id) {
     ['تاريخ التأجير', `${fmtRentalDate(a.rentalFrom)} - ${a.rentalTo || ''}`], ['مكان الوحدة', a.location], ['اسم الوحدة', a.unitName],
     ['اسم العميل', a.customerName], ['رقم الهوية', a.idNumber], ['رقم الجوال', a.mobile], ['تاريخ الميلاد', a.dob],
     ['قيمة التأجير الحالي', a.saleValueOld], ['قيمة التأجير الجديد', a.saleValueNew], ['طريقة الدفع', a.howToPay], ['التأمين', a.insurance], ['الرسوم', a.feeAmount],
+    ['المسوق', a.soldBy], ['تقرير ناجز', a.report], ['ملاحظات', a.notes], ['عداد الكهرباء', a.elecMeter], ['مبلغ الكهرباء', a.elecBill],
+    ['عداد الماء', a.waterMeter], ['مبلغ الماء', a.waterBill], ['سداد لم يدفع', a.unpaidPayment]
+  ] : a.type === 'transfer' ? [
+    ['تاريخ التأجير', `${fmtRentalDate(a.rentalFrom)} - ${a.rentalTo || ''}`], ['اسم الوحدة', a.unitName],
+    ['اسم المؤجر', a.landlordName], ['رقم الهوية', a.landlordIdNumber], ['رقم الجوال', a.landlordMobile], ['تاريخ الميلاد', a.landlordDob],
+    ['اسم المستأجر', a.tenantName], ['رقم الهوية', a.tenantIdNumber], ['رقم الجوال', a.tenantMobile], ['تاريخ الميلاد', a.tenantDob],
+    ['قيمة التأجير', a.saleValue], ['طريقة الدفع', a.howToPay], ['التأمين', a.insurance], ['الرسوم', a.feeAmount],
     ['المسوق', a.soldBy], ['تقرير ناجز', a.report], ['ملاحظات', a.notes], ['عداد الكهرباء', a.elecMeter], ['مبلغ الكهرباء', a.elecBill],
     ['عداد الماء', a.waterMeter], ['مبلغ الماء', a.waterBill], ['سداد لم يدفع', a.unpaidPayment]
   ] : [
@@ -8216,6 +8306,39 @@ function printContractAgreement(id) {
       ${row('تاريخ الميلاد', 'Date of Birth', a.dob)}
       ${row('قيمة التأجير الحالي', 'Sale Value Old', a.saleValueOld)}
       ${row('قيمة التأجير الجديد', 'Sale Value New', a.saleValueNew)}
+      ${row('طريقة الدفع', 'How to Pay', a.howToPay)}
+      ${row('التأمين', 'Insurance', a.insurance)}
+      ${row('الرسوم', 'Fee Amount', a.feeAmount)}
+      ${row('المسوق', 'Sold By', a.soldBy)}
+      ${row('تقرير ناجز', 'Najiz Report', a.report)}
+      ${row('ملاحظات', 'Notes', a.notes)}
+    </table>`;
+    bodyHtml += `<table>
+      ${row('رقم عداد الكهرباء', 'Electricity Meter Number', a.elecMeter)}
+      ${row('المبلغ', 'Bill', a.elecBill)}
+      ${row('ملاحظات', 'Notes', a.elecNotes)}
+      ${row('رقم عداد الماء', 'Water Meter Number', a.waterMeter)}
+      ${row('المبلغ', 'Bill', a.waterBill)}
+      ${row('ملاحظات', 'Notes', a.waterNotes)}
+    </table>`;
+    bodyHtml += `<table>
+      ${row('سداد لم يدفع', 'Unpaid Payment', a.unpaidPayment)}
+      ${row('ملاحظات', 'Notes', a.notes2)}
+    </table>`;
+  } else if (a.type === 'transfer') {
+    bodyHtml += centerBold('اتفاقية تأجير للغير / Agreement Rental To Third Party');
+    bodyHtml += `<table>
+      ${dateRow('تاريخ التأجير', 'Rental Date', a.rentalFrom, a.rentalTo)}
+      ${row('اسم الوحدة', 'Unit Name', a.unitName)}
+      ${row('اسم المؤجر', '', a.landlordName)}
+      ${row('رقم الهوية', 'Number ID', a.landlordIdNumber)}
+      ${row('رقم الجوال', 'Mobile Number', a.landlordMobile)}
+      ${row('تاريخ الميلاد', 'Date of Birth', a.landlordDob)}
+      ${row('اسم المستأجر', '', a.tenantName)}
+      ${row('رقم الهوية', 'Number ID', a.tenantIdNumber)}
+      ${row('رقم الجوال', 'Mobile Number', a.tenantMobile)}
+      ${row('تاريخ الميلاد', 'Date of Birth', a.tenantDob)}
+      ${row('قيمة التأجير', 'Sale Value', a.saleValue)}
       ${row('طريقة الدفع', 'How to Pay', a.howToPay)}
       ${row('التأمين', 'Insurance', a.insurance)}
       ${row('الرسوم', 'Fee Amount', a.feeAmount)}
@@ -8403,8 +8526,8 @@ function renderContractsUndocumented() {
   const canDocument = currentUser && (currentUser.role === 'مدير' || currentUser.role === 'مشرف');
   const canDelete = currentUser && (currentUser.role === 'مدير' || currentUser.role === 'مشرف');
     el.innerHTML = '<div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));">' + sortContractsByRecency(list).map(a => {
-    const color = a.type === 'new' ? 'var(--danger)' : 'var(--warning)';
-    const typeLabel = a.type === 'new' ? 'تأجير جديد' : 'تعديل بيانات';
+    const color = a.type === 'new' ? 'var(--danger)' : (a.type === 'transfer' ? 'var(--info)' : 'var(--warning)');
+    const typeLabel = a.type === 'new' ? 'تأجير جديد' : (a.type === 'transfer' ? 'تأجير للغير' : 'تعديل بيانات');
     return `<div class="card" style="border-right:5px solid ${color};margin-top:0;">
       <div style="font-weight:700;font-size:15px;">${contractDisplayName(a) || '—'}</div>
       <div style="font-size:12px;color:var(--text-muted);margin:4px 0 10px;">${typeLabel} — ${fmtDate(a.createdAt)}</div>
@@ -8430,8 +8553,8 @@ function renderContractsDocumented() {
   if (!list.length) { el.innerHTML = '<div class="card"><div class="empty-state"><i class="fas fa-stamp"></i><h3>لا توجد اتفاقيات موثقة</h3></div></div>'; return; }
   const canDelete = currentUser && (currentUser.role === 'مدير' || currentUser.role === 'مشرف');
     el.innerHTML = '<div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));">' + sortContractsByRecency(list).map(a => {
-    const color = a.type === 'new' ? 'var(--danger)' : 'var(--warning)';
-    const typeLabel = a.type === 'new' ? 'تأجير جديد' : 'تعديل بيانات';
+    const color = a.type === 'new' ? 'var(--danger)' : (a.type === 'transfer' ? 'var(--info)' : 'var(--warning)');
+    const typeLabel = a.type === 'new' ? 'تأجير جديد' : (a.type === 'transfer' ? 'تأجير للغير' : 'تعديل بيانات');
     return `<div class="card" style="border-right:5px solid ${color};margin-top:0;position:relative;overflow:hidden;">
       <div style="font-size:10px;color:var(--success);font-weight:700;background:rgba(34,197,94,0.1);padding:4px 8px;border-radius:6px;display:inline-block;margin-bottom:8px;"><i class="fas fa-stamp"></i> تم التوثيق إلكترونياً من قبل ${a.documentedBy || 'المدير'}</div>
       <div style="font-weight:700;font-size:15px;">${contractDisplayName(a) || '—'}</div>
@@ -8521,18 +8644,20 @@ function renderContractsDashboard() {
     : undocumentedList.filter(a => a.soldBy === currentUserDisplayName()).length;
   const documented = list.filter(a => a.status === 'documented').length;
   const newCount = list.filter(a => a.type === 'new').length;
-  const changeCount = list.filter(a => a.type !== 'new').length;
+  const transferCount = list.filter(a => a.type === 'transfer').length;
+  const changeCount = list.filter(a => a.type !== 'new' && a.type !== 'transfer').length;
   document.getElementById('contractsDashStats').innerHTML =
     statCardHTML('fa-file-contract', 'rgba(13,33,55,0.1)', 'var(--primary)', total, 'إجمالي الاتفاقيات') +
     statCardHTML('fa-hourglass-half', 'rgba(239,68,68,0.12)', 'var(--danger)', undocumented, 'غير موثقة') +
     statCardHTML('fa-stamp', 'rgba(34,197,94,0.12)', 'var(--success)', documented, 'موثقة') +
     statCardHTML('fa-file-signature', 'rgba(239,68,68,0.12)', 'var(--danger)', newCount, 'تأجير جديد') +
-    statCardHTML('fa-file-pen', 'rgba(245,158,11,0.12)', 'var(--warning)', changeCount, 'تعديل بيانات');
+    statCardHTML('fa-file-pen', 'rgba(245,158,11,0.12)', 'var(--warning)', changeCount, 'تعديل بيانات') +
+    statCardHTML('fa-people-arrows', 'rgba(59,130,246,0.12)', 'var(--info)', transferCount, 'تأجير للغير');
   const el = document.getElementById('contractsDashRecent');
     const recent = sortContractsByRecency(list);
   el.innerHTML = '<div class="card-title"><i class="fas fa-list"></i> كل الاتفاقيات</div>' +
     (recent.length ? '<div class="table-wrapper" style="max-height:420px;overflow-y:auto;"><table><thead><tr><th>العميل</th><th>النوع</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>' +
-      recent.map(a => `<tr><td>${contractDisplayName(a) || '—'}</td><td>${a.type === 'new' ? 'تأجير جديد' : 'تعديل بيانات'}</td><td><span class="badge ${a.status === 'documented' ? 'badge-success' : 'badge-muted'}">${a.status === 'documented' ? 'موثقة' : 'غير موثقة'}</span></td><td>${fmtDate(a.createdAt)}</td></tr>`).join('') + '</tbody></table></div>'
+      recent.map(a => `<tr><td>${contractDisplayName(a) || '—'}</td><td>${a.type === 'new' ? 'تأجير جديد' : (a.type === 'transfer' ? 'تأجير للغير' : 'تعديل بيانات')}</td><td><span class="badge ${a.status === 'documented' ? 'badge-success' : 'badge-muted'}">${a.status === 'documented' ? 'موثقة' : 'غير موثقة'}</span></td><td>${fmtDate(a.createdAt)}</td></tr>`).join('') + '</tbody></table></div>'
       : '<div class="empty-state"><i class="fas fa-inbox"></i><h3>لا توجد بيانات</h3></div>');
 }
 

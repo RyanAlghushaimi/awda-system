@@ -2961,12 +2961,19 @@ function mergeAppData(fresh, local) {
   // رغم وجود 36+ سجلًا فعليًا في Firestore. مصدرها الحقيقي هو Collection مستقلة
   // (نفس requests/schedules)، لذلك نأخذها من "local" (النسخة الحية المحدَّثة
   // عبر onRealtimeUpdate الخاص بها) تمامًا كما نفعل مع requests/schedules.
+  // ملاحظة إصلاح: logBook (دفتر سجل الصيانة: عقارات/وحدات <- شقق <- ملاحظات)
+  // لا يملك Collection مستقلة خاصة به (على عكس requests/schedules)، بل يعيش
+  // فقط داخل هذا المستند الرئيسي. لذلك يجب أخذه من "local" (النسخة الحية في
+  // appData بعد أي إضافة/حذف عبر MaintenanceRepository) وليس إسقاطه بعدم
+  // ذكره هنا إطلاقًا — وإلا فكل save() لأي قسم آخر كان يعيد بناء
+  // appData.maintenance بالكامل بلا logBook فتختفي البيانات فور أي حفظ.
   merged.maintenance = {
     requests: (local.maintenance||{}).requests || [],
     schedules: (local.maintenance||{}).schedules || [],
     sheetRequests: (local.maintenance||{}).sheetRequests || [],
     log: mergeLogArrays((fresh.maintenance||{}).log, (local.maintenance||{}).log, 500, logDeletedIds.maintenance),
-    assigneeMemory: [...new Set([...(fresh.maintenance||{}).assigneeMemory||[], ...(local.maintenance||{}).assigneeMemory||[]])]
+    assigneeMemory: [...new Set([...(fresh.maintenance||{}).assigneeMemory||[], ...(local.maintenance||{}).assigneeMemory||[]])],
+    logBook: (local.maintenance||{}).logBook || (fresh.maintenance||{}).logBook || []
   };
   if (local.users || fresh.users) {
     merged.users = merged.users || { list: [] };

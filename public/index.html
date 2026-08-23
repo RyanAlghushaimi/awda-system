@@ -8521,7 +8521,7 @@ function renderContractsDashboard() {
     : undocumentedList.filter(a => a.soldBy === currentUserDisplayName()).length;
   const documented = list.filter(a => a.status === 'documented').length;
   const newCount = list.filter(a => a.type === 'new').length;
-  const changeCount = list.filter(a => a.type === 'change').length;
+  const changeCount = list.filter(a => a.type !== 'new').length;
   document.getElementById('contractsDashStats').innerHTML =
     statCardHTML('fa-file-contract', 'rgba(13,33,55,0.1)', 'var(--primary)', total, 'إجمالي الاتفاقيات') +
     statCardHTML('fa-hourglass-half', 'rgba(239,68,68,0.12)', 'var(--danger)', undocumented, 'غير موثقة') +
@@ -8529,9 +8529,9 @@ function renderContractsDashboard() {
     statCardHTML('fa-file-signature', 'rgba(239,68,68,0.12)', 'var(--danger)', newCount, 'تأجير جديد') +
     statCardHTML('fa-file-pen', 'rgba(245,158,11,0.12)', 'var(--warning)', changeCount, 'تعديل بيانات');
   const el = document.getElementById('contractsDashRecent');
-    const recent = sortContractsByRecency(list).slice(0, 8);
-  el.innerHTML = '<div class="card-title"><i class="fas fa-clock"></i> أحدث الاتفاقيات</div>' +
-    (recent.length ? '<div class="table-wrapper"><table><thead><tr><th>العميل</th><th>النوع</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>' +
+    const recent = sortContractsByRecency(list);
+  el.innerHTML = '<div class="card-title"><i class="fas fa-list"></i> كل الاتفاقيات</div>' +
+    (recent.length ? '<div class="table-wrapper" style="max-height:420px;overflow-y:auto;"><table><thead><tr><th>العميل</th><th>النوع</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>' +
       recent.map(a => `<tr><td>${contractDisplayName(a) || '—'}</td><td>${a.type === 'new' ? 'تأجير جديد' : 'تعديل بيانات'}</td><td><span class="badge ${a.status === 'documented' ? 'badge-success' : 'badge-muted'}">${a.status === 'documented' ? 'موثقة' : 'غير موثقة'}</span></td><td>${fmtDate(a.createdAt)}</td></tr>`).join('') + '</tbody></table></div>'
       : '<div class="empty-state"><i class="fas fa-inbox"></i><h3>لا توجد بيانات</h3></div>');
 }

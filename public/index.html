@@ -3000,7 +3000,43 @@ function mergeAppData(fresh, local) {
 // "يكتب" هو من يفوز بغض النظر عن ترتيب البدء — مما قد "يُرجع" حذفًا حصل في
 // النداء الآخر أو يفقد تعديلاً. الحل: طابور تنفيذ (queue) يضمن أن كل save()
 // ينتظر اكتمال السابق قبل أن يبدأ فعليًا، فيرى دائمًا أحدث appData صحيحة.
-let __saveQueue = Promise.resolve();
+// ============================================================
+// ===== طابور الحفظ المُدمَج (Coalescing Save Queue) =====
+// ============================================================
+// المشكلة السابقة: كل نداء save() كان يُضاف كحلقة مستقلة في سلسلة Promise
+// (__saveQueue.then(run, run))، فإذا حدثت مثلاً 5 تعديلات متتالية سريعة، كانت
+// تُنفَّذ 5 رحلات كاملة ومنفصلة (load من Firebase → merge → write) واحدة تلو
+// الأخرى بالتسلسل — كل رحلة تُعيد تحميل المستند كاملًا (~750KB) حتى لو لم
+// يتغيّر شيء خارجيًا، مما يجعل الانتظار الكلي يتضاعف مع كل تعديل إضافي بدل أن
+// يبقى ثابتًا.
+// الحل: بدل تنفيذ رحلة منفصلة لكل نداء save()، تُجمَّع كل النداءات التي تصل
+// أثناء تنفيذ رحلة حالية في "دفعة معلّقة" واحدة (__savePendingResolvers)، وما
+// إن تنتهي الرحلة الجارية، تُنفَّذ رحلة واحدة إضافية فقط (لا أكثر) تلتقط آخر
+// حالة لـ appData (وتشمل كل التعديلات التي تراكمت أثناء الانتظار)، ثم تُحل كل
+// الـ Promises المعلّقة لتلك الدفعة معًا. بهذا: أي عدد من التعديلات المتتالية
+// أثناء انتظار رحلة حفظ واحدة لا يُنتج أكثر من رحلة إضافية واحدة بعدها — بدل
+// رحلة منفصلة لكل تعديل. هذا لا يزيل خطوة "تحميل fresh + merge" (وهي ضرورية
+// لعدم فقدان تعديلات مستخدمين/أجهزة أخرى تعمل بالتوازي)، بل يمنع فقط تكرارها
+// بلا داعٍ لكل نداء متتالٍ.
+let __saveInFlight = false;
+let __savePendingResolvers = [];
+function __runSaveLoop() {
+  if (__saveInFlight) return; // توجد رحلة حفظ قيد التنفيذ بالفعل — ستلتقط هذا النداء تلقائيًا في الجولة التالية
+  __saveInFlight = true;
+  (async () => {
+    while (__savePendingResolvers.length) {
+      const batch = __savePendingResolvers;
+      __savePendingResolvers = [];
+      try {
+        await _executeSave();
+        batch.forEach(r => r.resolve());
+      } catch (e) {
+        batch.forEach(r => r.reject(e));
+      }
+    }
+    __saveInFlight = false;
+  })();
+}
 function save() {
   const __ltid = window.__TRACE_TEST_ID || sessionStorage.getItem('__TRACE_TEST_ID') || null;
   if (__ltid) {
@@ -3009,10 +3045,10 @@ function save() {
       '| هل ' + __ltid + ' موجود حاليًا في appData.contracts.log؟ =', (appData.contracts?.log || []).some(l => l.id === __ltid),
       '\nStack:', new Error().stack);
   }
-  const run = () => _executeSave();
-  const p = __saveQueue.then(run, run);
-  __saveQueue = p.catch(() => {}); // لا نكسر السلسلة حتى لو فشل نداء سابق
-  return p;
+  return new Promise((resolve, reject) => {
+    __savePendingResolvers.push({ resolve, reject });
+    __runSaveLoop();
+  });
 }
 async function _executeSave() {
   appData.agents.forEach(a => a.updatedAt = new Date().toISOString());
@@ -7219,9 +7255,9 @@ const MaintenanceRepository = {
   // فورًا وتُحل الـ Promise فورًا (فيُحدَّث DOM في نفس اللحظة)، بينما save()
   // تُجدوَل في الخلفية عبر مؤقّت debounce (mlogScheduleSave) حتى لا تتراكم عدة
   // نداءات save() متزامنة عند تعديلات متتالية سريعة (مثل إضافة عدة ملاحظات
-  // خلف بعضها) — تُدمج في نداء save() واحد مؤجَّل قليلًا. آلية الطابور
-  // الداخلية في save() نفسها (__saveQueue) تبقى كما هي دون أي تغيير، فتُضمن
-  // معالجة كل نداء بالتسلسل دون تضارب.
+  // خلف بعضها) — تُدمج في نداء save() واحد مؤجَّل قليلًا. طابور الحفظ الداخلي
+  // في save() نفسها أصبح الآن مُدمِجًا (coalescing) بحيث لا يُنفَّذ أكثر من
+  // رحلة إضافية واحدة لأي عدد من النداءات المتراكمة أثناء رحلة جارية.
   addLogBookBuilding(b) { this.ensure(); appData.maintenance.logBook.push(b); mlogScheduleSave(); return Promise.resolve(b); },
   deleteLogBookBuilding(id) { this.ensure(); appData.maintenance.logBook = appData.maintenance.logBook.filter(x => x.id !== id); mlogScheduleSave(); return Promise.resolve(); },
   addLogBookUnit(buildingId, u) {
@@ -7862,7 +7898,7 @@ function renderMaintLogBuildings() {
     </div>`;
   if (!list.length) {
     html += '<div class="card"><div class="empty-state"><i class="fas fa-building"></i><h3>لا توجد عقارات/وحدات بعد</h3><p>ابدأ بإضافة أول عقار أو وحدة من زر "إضافة وحدة"</p></div></div>';
-    el.innerHTML = html; return;
+    el.innerHTML = html; el.insertAdjacentHTML('beforeend', mlogRenderAllNotesFeed()); return;
   }
   html += '<div class="mlog-grid">' + list.map((b, i) => {
     const unitCount = b.units.length;
@@ -7874,7 +7910,54 @@ function renderMaintLogBuildings() {
       <div class="mlog-card-meta"><i class="fas fa-door-open"></i> ${unitCount} وحدة/شقة &nbsp;•&nbsp; <i class="fas fa-note-sticky"></i> ${noteCount} ملاحظة</div>
     </div>`;
   }).join('') + '</div>';
+  html += mlogRenderAllNotesFeed();
   el.innerHTML = html;
+}
+// تجميع كل الملاحظات من جميع العقارات/الوحدات في قائمة واحدة، مرتبة تنازليًا
+// (الأحدث أعلى)، مع توضيح اسم العقار والشقة/الوحدة التي تخص كل ملاحظة —
+// تُعرض أسفل بطاقات العقارات في المستوى الأول مباشرة.
+function mlogCollectAllNotes() {
+  ensureMaintenanceData();
+  const rows = [];
+  appData.maintenance.logBook.forEach(b => {
+    b.units.forEach(u => {
+      u.notes.forEach(n => rows.push({ note: n, buildingId: b.id, buildingName: b.name, unitId: u.id, unitName: u.name }));
+    });
+  });
+  rows.sort((a, c) => {
+    const ta = a.note.createdAt ? new Date(a.note.createdAt).getTime() : 0;
+    const tc = c.note.createdAt ? new Date(c.note.createdAt).getTime() : 0;
+    return tc - ta; // الأحدث أولًا
+  });
+  return rows;
+}
+function mlogRenderAllNotesFeed() {
+  const rows = mlogCollectAllNotes();
+  let html = `<div style="margin-top:26px;">
+    <div class="mlog-toolbar" style="margin-bottom:12px;">
+      <div class="mlog-crumbs"><i class="fas fa-list-check"></i> جميع الملاحظات (الأحدث أولًا)</div>
+    </div>`;
+  if (!rows.length) {
+    html += '<div class="card"><div class="empty-state"><i class="fas fa-note-sticky"></i><h3>لا توجد ملاحظات بعد</h3><p>ستظهر هنا كل ملاحظات الصيانة من جميع العقارات فور إضافتها</p></div></div></div>';
+    return html;
+  }
+  html += '<div class="mlog-notes-list">' + rows.map(r => {
+    const n = r.note;
+    const cat = mlogDetectCategory(n.category || n.text);
+    return `<div class="mlog-note-row" style="cursor:pointer;" onclick="openMlogBuilding('${r.buildingId}');openMlogUnit('${r.unitId}');">
+      <div class="mlog-note-icon" style="background:${cat.color};"><i class="fas ${cat.icon}"></i></div>
+      <div class="mlog-note-body">
+        <div class="mlog-note-text">${n.text}</div>
+        <div class="mlog-note-tags">
+          <span class="mlog-note-cat">${n.category || cat.key}</span>
+          <span class="mlog-note-cat" style="background:var(--surface2);"><i class="fas fa-building"></i> ${r.buildingName} <i class="fas fa-angle-left"></i> ${r.unitName}</span>
+          <span class="mlog-note-time"><i class="fas fa-clock"></i>${mlogFmtDateTime(n.createdAt)}</span>
+          <span class="mlog-note-user"><i class="fas fa-user"></i> ${n.user || 'غير معروف'}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + '</div></div>';
+  return html;
 }
 function renderMaintLogUnits() {
   ensureMaintenanceData();

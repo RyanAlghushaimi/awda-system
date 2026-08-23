@@ -7212,31 +7212,52 @@ const MaintenanceRepository = {
     await save();
   },
   // ===== دفتر سجل الصيانة (عقارات/وحدات <- شقق <- ملاحظات) =====
-  async addLogBookBuilding(b) { this.ensure(); appData.maintenance.logBook.push(b); await save(); return b; },
-  async deleteLogBookBuilding(id) { this.ensure(); appData.maintenance.logBook = appData.maintenance.logBook.filter(x => x.id !== id); await save(); },
-  async addLogBookUnit(buildingId, u) {
+  // ملاحظة أداء (إصلاح البطء): كانت كل عملية إضافة/حذف هنا تنتظر await save()
+  // قبل أن تُحل الـ Promise، وsave() قد يستغرق ~15 ثانية (رحلة كاملة إلى
+  // Firebase ذهابًا وإيابًا: load → merge → write) — فتبقى الواجهة معلّقة طوال
+  // هذه المدة قبل أن يظهر أي تغيير للمستخدم. الآن: التعديل يُطبَّق على appData
+  // فورًا وتُحل الـ Promise فورًا (فيُحدَّث DOM في نفس اللحظة)، بينما save()
+  // تُجدوَل في الخلفية عبر مؤقّت debounce (mlogScheduleSave) حتى لا تتراكم عدة
+  // نداءات save() متزامنة عند تعديلات متتالية سريعة (مثل إضافة عدة ملاحظات
+  // خلف بعضها) — تُدمج في نداء save() واحد مؤجَّل قليلًا. آلية الطابور
+  // الداخلية في save() نفسها (__saveQueue) تبقى كما هي دون أي تغيير، فتُضمن
+  // معالجة كل نداء بالتسلسل دون تضارب.
+  addLogBookBuilding(b) { this.ensure(); appData.maintenance.logBook.push(b); mlogScheduleSave(); return Promise.resolve(b); },
+  deleteLogBookBuilding(id) { this.ensure(); appData.maintenance.logBook = appData.maintenance.logBook.filter(x => x.id !== id); mlogScheduleSave(); return Promise.resolve(); },
+  addLogBookUnit(buildingId, u) {
     this.ensure();
-    const b = appData.maintenance.logBook.find(x => x.id === buildingId); if (!b) return null;
-    b.units.push(u); await save(); return u;
+    const b = appData.maintenance.logBook.find(x => x.id === buildingId); if (!b) return Promise.resolve(null);
+    b.units.push(u); mlogScheduleSave(); return Promise.resolve(u);
   },
-  async deleteLogBookUnit(buildingId, unitId) {
+  deleteLogBookUnit(buildingId, unitId) {
     this.ensure();
-    const b = appData.maintenance.logBook.find(x => x.id === buildingId); if (!b) return;
-    b.units = b.units.filter(u => u.id !== unitId); await save();
+    const b = appData.maintenance.logBook.find(x => x.id === buildingId); if (!b) return Promise.resolve();
+    b.units = b.units.filter(u => u.id !== unitId); mlogScheduleSave(); return Promise.resolve();
   },
-  async addLogBookNote(buildingId, unitId, note) {
+  addLogBookNote(buildingId, unitId, note) {
     this.ensure();
-    const b = appData.maintenance.logBook.find(x => x.id === buildingId); if (!b) return null;
-    const u = b.units.find(x => x.id === unitId); if (!u) return null;
-    u.notes.unshift(note); await save(); return note;
+    const b = appData.maintenance.logBook.find(x => x.id === buildingId); if (!b) return Promise.resolve(null);
+    const u = b.units.find(x => x.id === unitId); if (!u) return Promise.resolve(null);
+    u.notes.unshift(note); mlogScheduleSave(); return Promise.resolve(note);
   },
-  async deleteLogBookNote(buildingId, unitId, noteId) {
+  deleteLogBookNote(buildingId, unitId, noteId) {
     this.ensure();
-    const b = appData.maintenance.logBook.find(x => x.id === buildingId); if (!b) return;
-    const u = b.units.find(x => x.id === unitId); if (!u) return;
-    u.notes = u.notes.filter(n => n.id !== noteId); await save();
+    const b = appData.maintenance.logBook.find(x => x.id === buildingId); if (!b) return Promise.resolve();
+    const u = b.units.find(x => x.id === unitId); if (!u) return Promise.resolve();
+    u.notes = u.notes.filter(n => n.id !== noteId); mlogScheduleSave(); return Promise.resolve();
   }
 };
+// مؤقّت debounce مخصص لحفظ دفتر سجل الصيانة: يؤجَّل نداء save() الفعلي قليلًا
+// (600ms) في كل مرة يحدث فيها تعديل جديد، فإن حدثت عدة تعديلات متتالية خلال
+// هذه المهلة تُدمج كلها في نداء save() واحد فقط بدل نداء منفصل لكل تعديل.
+let _mlogSaveTimer = null;
+function mlogScheduleSave() {
+  if (_mlogSaveTimer) clearTimeout(_mlogSaveTimer);
+  _mlogSaveTimer = setTimeout(() => {
+    _mlogSaveTimer = null;
+    save().catch(e => console.error('[MaintenanceRepository logBook save]', e));
+  }, 600);
+}
 function logMaintDraft(action, details, before, after) {
   // ✅ إصلاح: أُضيف حقل user (لم يكن موجوداً إطلاقاً — ولهذا لم يكن يظهر اسم
   // من قام بالإضافة/التعديل/الحذف) وحقل tsNum (ضروري للترتيب الزمني الصحيح

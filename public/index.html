@@ -1065,7 +1065,6 @@ body.view-only-mode .vac-status-btn {
       <div class="nav-item nav-parent" onclick="toggleMaintSubmenu(this)" id="nav-maint-parent">
         <i class="fas fa-screwdriver-wrench"></i>
         <span class="nav-label">إدارة الصيانة</span>
-        <span class="nav-badge" id="navBadgeMaintParent" style="display:none;"></span>
         <i class="fas fa-chevron-down nav-parent-arrow"></i>
       </div>
       <div class="nav-submenu" id="nav-maint-submenu">
@@ -1081,6 +1080,7 @@ body.view-only-mode .vac-status-btn {
         </div>
         <div class="nav-item" onclick="showPage('maint-log')" id="nav-maint-log">
           <i class="fas fa-clock-rotate-left"></i><span class="nav-label">سجل الصيانة</span>
+          <span class="nav-badge" id="navBadgeMaintLog" style="display:none;"></span>
         </div>
         <div class="nav-item" onclick="showPage('maint-draft')" id="nav-maint-draft">
           <i class="fas fa-file-pen"></i><span class="nav-label">مسودة الصيانة</span>
@@ -7357,18 +7357,18 @@ function manualSyncMaintSheetRequests() {
 // (مثلاً "9/1/2026" تُقارَن نصيًا أكبر من "10/1/2026"). يحاول أولاً Date.parse
 // القياسي، ثم صيغة m/d/yyyy h:mm:ss يدويًا كاحتياط، ثم صفر إن تعذّر الكل
 // (يظهر في آخر الترتيب التنازلي بدل أن يكسر الفرز).
-// يُحدّث شارة العدد على "متابعة الطلبات" وعلى القسم الأب "إدارة الصيانة" —
-// يُحسب من البلاغات غير المكتملة (done:false) في appData.maintenance.sheetRequests،
-// ويُستدعى من كل نقطة تتغيّر فيها هذه القائمة فعليًا (عرض الصفحة، التحديث
-// اللحظي عبر onSnapshot، وبعد كل مزامنة يدوية أو تلقائية).
-// شارة الإشعارات تعرض العدد الكلي لكل بلاغات نموذج الصيانة دائمًا — لا علاقة
-// لها إطلاقًا بحالة "تمت الصيانة"/"لم تتم" (بطلب صريح من المستخدم)، ولا
-// تتأثر بالضغط على "تمت الصيانة". رقم البلاغ الخاص بكل طلب (reqNum) مسألة
-// منفصلة تمامًا تُستخدم فقط للتعريف عند العرض والنسخ.
+// يُحدّث شارة العدد على "متابعة الطلبات" (من appData.maintenance.sheetRequests)
+// وعلى "سجل الصيانة" (من appData.maintenance.jobsLog) — بلا أي شارة على
+// القسم الأب "إدارة الصيانة" (حُذفت بطلب صريح من المستخدم، فلم يعد لها عنصر
+// HTML أصلًا). كل شارة تعرض العدد الكلي لقائمتها الخاصة دائمًا ولا تُخفى إلا
+// عند صفر عناصر — لا تتأثر بأي حالة "قراءة"/"تمت" لأن العناصر في القائمتين
+// (البلاغات وسجل الوظائف) لا تُحذف أبدًا، فالرقم لا يتراجع إلا نادرًا.
+// يُستدعى من كل نقطة تتغيّر فيها إحدى القائمتين فعليًا (عرض الصفحة، التحديث
+// اللحظي عبر onSnapshot، بعد كل مزامنة يدوية أو تلقائية، وبعد كل إضافة وظيفة).
 function updateMaintNotifBadge() {
-  const list = (appData.maintenance && appData.maintenance.sheetRequests) || [];
-  const count = list.length;
-  [['navBadgeMaintTrack', count], ['navBadgeMaintParent', count]].forEach(([id, n]) => {
+  const trackList = (appData.maintenance && appData.maintenance.sheetRequests) || [];
+  const logList = (appData.maintenance && appData.maintenance.jobsLog) || [];
+  [['navBadgeMaintTrack', trackList.length], ['navBadgeMaintLog', logList.length]].forEach(([id, n]) => {
     const el = document.getElementById(id);
     if (!el) return;
     if (n > 0) { el.textContent = n > 99 ? '99+' : String(n); el.style.display = ''; }
@@ -7799,6 +7799,16 @@ function deleteMaintSchedule(id) {
 // ملاحظة: هذا القسم استُبدل بالكامل بناءً على طلب المستخدم — لم يعد دفتر
 // عقارات/وحدات/ملاحظات، بل قائمة وظائف بسيطة: تُضاف فقط ولا تُحذف أبدًا،
 // وتُعرض كصفوف ملونة، وفي أقصى يسار كل صف يظهر يوم ووقت وتاريخ الإضافة.
+// تحديث لاحق (بطلب صريح من المستخدم):
+// 1) الإضافة متاحة الآن لكل المستخدمين المصرَّح لهم بالوصول لهذه الصفحة —
+//    وليست حكرًا على المدير/المشرف فقط (أُزيل القيد بالكامل).
+// 2) كل وظيفة تأخذ رقمًا تصاعديًا دائمًا (jobNum) بنفس أسلوب reqNum في
+//    "متابعة الطلبات": يُحسب كـ (أكبر رقم موجود حاليًا + 1) عند الإضافة، فلا
+//    يتكرر ولا يتراجع أبدًا. وبما أن القائمة تُعرض بترتيب الأحدث أولًا، يظهر
+//    الرقم الأكبر دائمًا في أعلى القائمة.
+// 3) شارة العدد على هذه الصفحة في القائمة الجانبية (navBadgeMaintLog) تُحدَّث
+//    مع كل عرض وكل إضافة عبر updateMaintNotifBadge() — تمامًا كما هو معمول
+//    به في "متابعة الطلبات"، مع حذف الشارة التي كانت على "إدارة الصيانة" الأب.
 const MLOG_PALETTE = [
   'linear-gradient(135deg,#0d2137 0%,#1a3a5c 100%)',
   'linear-gradient(135deg,#0c4a6e 0%,#0ea5e9 100%)',
@@ -7809,7 +7819,6 @@ const MLOG_PALETTE = [
   'linear-gradient(135deg,#831843 0%,#ec4899 100%)',
   'linear-gradient(135deg,#134e4a 0%,#14b8a6 100%)'
 ];
-function mlogCanEdit() { return !!(currentUser && (currentUser.role === 'مدير' || currentUser.role === 'مشرف')); }
 function mlogFmtParts(iso) {
   if (!iso) return { day: '', time: '', date: '' };
   try {
@@ -7823,15 +7832,16 @@ function mlogFmtParts(iso) {
 }
 function renderMaintLog() {
   ensureMaintenanceData();
+  updateMaintNotifBadge(); // يُحدَّث دائمًا حسب القائمة الكاملة (بنفس أسلوب متابعة الطلبات)
   const sub = document.getElementById('maintLogSubtitle');
   if (sub) sub.textContent = 'سجل الوظائف والمهام الخاصة بالصيانة';
-  const canEdit = mlogCanEdit();
   const el = document.getElementById('maintLogContent');
   let html = `<div class="mlog-toolbar">
       <div class="mlog-crumbs"><i class="fas fa-briefcase"></i> سجل الوظائف</div>
-      ${canEdit ? `<button class="mlog-add-btn no-print" onclick="addMaintJob()"><i class="fas fa-plus"></i> إضافة وظيفة</button>` : ''}
+      <button class="mlog-add-btn no-print" onclick="addMaintJob()"><i class="fas fa-plus"></i> إضافة وظيفة</button>
     </div>`;
-  // الأحدث دائمًا أعلى القائمة
+  // الأحدث دائمًا أعلى القائمة (وله الرقم التصاعدي الأكبر لأن jobNum يُخصَّص
+  // بالتسلسل عند الإضافة)
   const jobs = [...appData.maintenance.jobsLog].sort((a, c) => {
     const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
     const tc = c.createdAt ? new Date(c.createdAt).getTime() : 0;
@@ -7844,6 +7854,7 @@ function renderMaintLog() {
   html += '<div class="mlog-notes-list">' + jobs.map((j, i) => {
     const parts = mlogFmtParts(j.createdAt);
     return `<div class="mlog-note-row" style="background:${MLOG_PALETTE[i % MLOG_PALETTE.length]};">
+      <span class="badge badge-info" style="position:absolute;top:10px;left:12px;font-weight:800;background:rgba(255,255,255,.25);color:var(--white);">#${j.jobNum || '—'}</span>
       <div class="mlog-note-icon"><i class="fas fa-briefcase"></i></div>
       <div class="mlog-note-body">
         <div class="mlog-note-text">${j.text}</div>
@@ -7861,7 +7872,6 @@ function renderMaintLog() {
   el.innerHTML = html;
 }
 function addMaintJob() {
-  if (!mlogCanEdit()) { showToast('هذا الإجراء متاح للمدير أو المشرف فقط', 'error'); return; }
   Swal.fire({
     title: 'إضافة وظيفة',
     html: `<div style="text-align:right;direction:rtl;">
@@ -7876,9 +7886,12 @@ function addMaintJob() {
     }
   }).then(r => {
     if (r.isConfirmed) {
-      const job = { id: uid(), text: r.value.text, user: currentUser ? currentUser.name : 'غير معروف', createdAt: new Date().toISOString() };
+      ensureMaintenanceData();
+      // ترقيم تصاعدي دائم: أكبر رقم موجود حاليًا + 1 — نفس أسلوب reqNum في متابعة الطلبات
+      const nextNum = appData.maintenance.jobsLog.reduce((m, j) => j.jobNum ? Math.max(m, j.jobNum) : m, 0) + 1;
+      const job = { id: uid(), jobNum: nextNum, text: r.value.text, user: currentUser ? currentUser.name : 'غير معروف', createdAt: new Date().toISOString() };
       MaintenanceRepository.addMaintJob(job).then(() => {
-        logMaintDraft('add', `تمت إضافة وظيفة في سجل الصيانة: ${job.text}`, null, job);
+        logMaintDraft('add', `تمت إضافة وظيفة رقم ${job.jobNum} في سجل الصيانة: ${job.text}`, null, job);
         showToast('تمت إضافة الوظيفة', 'success'); renderMaintLog();
       });
     }

@@ -482,6 +482,7 @@ tfoot td { padding: 11px 14px; }
 .mlog-note-time-block .mlog-day { font-size:12px; font-weight:800; color:var(--white); }
 .mlog-note-time-block .mlog-time { font-size:13px; font-weight:800; color:var(--white); }
 .mlog-note-time-block .mlog-date { font-size:10.5px; color:rgba(255,255,255,.85); }
+.mjob-swal-popup { border-radius:20px !important; }
 .online-avatar-circle {
   width: 28px; height: 28px; border-radius: 50%;
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
@@ -7224,14 +7225,17 @@ const MaintenanceRepository = {
     appData.maintenance.log = [];
     await save();
   },
-  // ===== سجل الصيانة: قائمة الوظائف (تُضاف فقط ولا تُحذف أبدًا) =====
+  // ===== سجل الصيانة: قائمة الوظائف =====
   // ملاحظة أداء: التعديل يُطبَّق على appData فورًا وتُحل الـ Promise فورًا
   // (فيُحدَّث DOM في نفس اللحظة)، بينما save() الفعلية تُجدوَل في الخلفية عبر
   // مؤقّت debounce (mlogScheduleSave) حتى لا تتراكم عدة نداءات save() متزامنة
   // عند تعديلات متتالية سريعة. طابور الحفظ الداخلي في save() نفسها مُدمِج
   // (coalescing) بحيث لا يُنفَّذ أكثر من رحلة إضافية واحدة لأي عدد من
   // النداءات المتراكمة أثناء رحلة جارية.
-  addMaintJob(job) { this.ensure(); appData.maintenance.jobsLog.unshift(job); mlogScheduleSave(); return Promise.resolve(job); }
+  addMaintJob(job) { this.ensure(); appData.maintenance.jobsLog.unshift(job); mlogScheduleSave(); return Promise.resolve(job); },
+  // الحذف مقيَّد في الواجهة بصلاحية مدير/مشرف فقط (mlogCanDelete)؛ الدالة هنا
+  // تنفّذ الحذف الفعلي بعد أن تكون الواجهة قد تحقّقت من الصلاحية.
+  deleteMaintJob(id) { this.ensure(); appData.maintenance.jobsLog = appData.maintenance.jobsLog.filter(j => j.id !== id); mlogScheduleSave(); return Promise.resolve(); }
 };
 // مؤقّت debounce مخصص لحفظ سجل الصيانة: يؤجَّل نداء save() الفعلي قليلًا
 // (600ms) في كل مرة يحدث فيها تعديل جديد، فإن حدثت عدة تعديلات متتالية خلال
@@ -7797,18 +7801,19 @@ function deleteMaintSchedule(id) {
 // ===== سجل الصيانة: قائمة الوظائف (Maintenance Jobs Log) =====
 // ============================================================
 // ملاحظة: هذا القسم استُبدل بالكامل بناءً على طلب المستخدم — لم يعد دفتر
-// عقارات/وحدات/ملاحظات، بل قائمة وظائف بسيطة: تُضاف فقط ولا تُحذف أبدًا،
-// وتُعرض كصفوف ملونة، وفي أقصى يسار كل صف يظهر يوم ووقت وتاريخ الإضافة.
+// عقارات/وحدات/ملاحظات، بل قائمة وظائف بسيطة تُعرض كصفوف ملونة، وفي أقصى
+// يسار كل صف يظهر يوم ووقت وتاريخ الإضافة.
 // تحديث لاحق (بطلب صريح من المستخدم):
-// 1) الإضافة متاحة الآن لكل المستخدمين المصرَّح لهم بالوصول لهذه الصفحة —
-//    وليست حكرًا على المدير/المشرف فقط (أُزيل القيد بالكامل).
+// 1) الإضافة متاحة لكل المستخدمين المصرَّح لهم بالوصول لهذه الصفحة — وليست
+//    حكرًا على المدير/المشرف (لا قيد على الإضافة إطلاقًا).
 // 2) كل وظيفة تأخذ رقمًا تصاعديًا دائمًا (jobNum) بنفس أسلوب reqNum في
 //    "متابعة الطلبات": يُحسب كـ (أكبر رقم موجود حاليًا + 1) عند الإضافة، فلا
 //    يتكرر ولا يتراجع أبدًا. وبما أن القائمة تُعرض بترتيب الأحدث أولًا، يظهر
 //    الرقم الأكبر دائمًا في أعلى القائمة.
-// 3) شارة العدد على هذه الصفحة في القائمة الجانبية (navBadgeMaintLog) تُحدَّث
-//    مع كل عرض وكل إضافة عبر updateMaintNotifBadge() — تمامًا كما هو معمول
-//    به في "متابعة الطلبات"، مع حذف الشارة التي كانت على "إدارة الصيانة" الأب.
+// 3) شارة العدد على "سجل الصيانة" في القائمة الجانبية (navBadgeMaintLog)
+//    تُحدَّث مع كل عرض وكل إضافة/حذف عبر updateMaintNotifBadge().
+// 4) الحذف الآن متاح — لكن للمدير أو المشرف فقط (mlogCanDelete)، بعكس
+//    الإضافة المتاحة للجميع.
 const MLOG_PALETTE = [
   'linear-gradient(135deg,#0d2137 0%,#1a3a5c 100%)',
   'linear-gradient(135deg,#0c4a6e 0%,#0ea5e9 100%)',
@@ -7819,6 +7824,7 @@ const MLOG_PALETTE = [
   'linear-gradient(135deg,#831843 0%,#ec4899 100%)',
   'linear-gradient(135deg,#134e4a 0%,#14b8a6 100%)'
 ];
+function mlogCanDelete() { return !!(currentUser && (currentUser.role === 'مدير' || currentUser.role === 'مشرف')); }
 function mlogFmtParts(iso) {
   if (!iso) return { day: '', time: '', date: '' };
   try {
@@ -7835,6 +7841,7 @@ function renderMaintLog() {
   updateMaintNotifBadge(); // يُحدَّث دائمًا حسب القائمة الكاملة (بنفس أسلوب متابعة الطلبات)
   const sub = document.getElementById('maintLogSubtitle');
   if (sub) sub.textContent = 'سجل الوظائف والمهام الخاصة بالصيانة';
+  const canDelete = mlogCanDelete();
   const el = document.getElementById('maintLogContent');
   let html = `<div class="mlog-toolbar">
       <div class="mlog-crumbs"><i class="fas fa-briefcase"></i> سجل الوظائف</div>
@@ -7855,6 +7862,7 @@ function renderMaintLog() {
     const parts = mlogFmtParts(j.createdAt);
     return `<div class="mlog-note-row" style="background:${MLOG_PALETTE[i % MLOG_PALETTE.length]};">
       <span class="badge badge-info" style="position:absolute;top:10px;left:12px;font-weight:800;background:rgba(255,255,255,.25);color:var(--white);">#${j.jobNum || '—'}</span>
+      ${canDelete ? `<button class="no-print" onclick="deleteMaintJob('${j.id}')" title="حذف الوظيفة" style="position:absolute;bottom:8px;left:10px;width:26px;height:26px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:var(--white);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all var(--transition);" onmouseover="this.style.background='rgba(239,68,68,.85)'" onmouseout="this.style.background='rgba(255,255,255,.22)'"><i class="fas fa-trash"></i></button>` : ''}
       <div class="mlog-note-icon"><i class="fas fa-briefcase"></i></div>
       <div class="mlog-note-body">
         <div class="mlog-note-text">${j.text}</div>
@@ -7871,14 +7879,37 @@ function renderMaintLog() {
   }).join('') + '</div>';
   el.innerHTML = html;
 }
+// نافذة إضافة وظيفة — واجهة محسَّنة: رأس ملوّن بأيقونة، عداد أحرف حي، تلميحات
+// أمثلة سريعة قابلة للنقر لتعبئة الحقل، وتصميم متناسق مع هوية النظام (الذهبي
+// الكحلي) بدل نافذة Swal الافتراضية البسيطة.
 function addMaintJob() {
+  const EXAMPLES = ['صيانة مكيفات', 'إصلاح تسريب مياه', 'فحص كهرباء', 'صيانة دورية عامة'];
   Swal.fire({
-    title: 'إضافة وظيفة',
-    html: `<div style="text-align:right;direction:rtl;">
-      <div style="margin-bottom:10px;"><label style="font-size:12px;display:block;margin-bottom:4px;">وصف الوظيفة/المهمة</label>
-        <textarea class="swal2-textarea" id="mjob-text" style="direction:rtl;" placeholder="مثال: صيانة مكيفات الدور الثاني في مجمع الياسمين"></textarea></div>
-    </div>`,
-    showCancelButton: true, confirmButtonText: 'حفظ', cancelButtonText: 'إلغاء', confirmButtonColor: '#0d2137',
+    title: false,
+    html: `
+      <div style="text-align:right;direction:rtl;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+          <div style="width:52px;height:52px;flex-shrink:0;border-radius:14px;background:linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.18);">
+            <i class="fas fa-briefcase" style="font-size:22px;color:var(--white);"></i>
+          </div>
+          <div>
+            <div style="font-size:18px;font-weight:800;color:var(--text);">إضافة وظيفة جديدة</div>
+            <div style="font-size:12.5px;color:var(--text-light);">ستُضاف فورًا إلى سجل الصيانة برقم تسلسلي خاص بها</div>
+          </div>
+        </div>
+        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px;color:var(--text);">وصف الوظيفة/المهمة</label>
+        <textarea class="swal2-textarea" id="mjob-text" maxlength="500" style="direction:rtl;margin:0 0 4px;min-height:110px;border-radius:12px;" placeholder="مثال: صيانة مكيفات الدور الثاني في مجمع الياسمين" oninput="document.getElementById('mjob-counter').textContent = this.value.length + ' / 500'"></textarea>
+        <div id="mjob-counter" style="text-align:left;font-size:11px;color:var(--text-light);margin-bottom:14px;">0 / 500</div>
+        <div style="font-size:11.5px;color:var(--text-light);margin-bottom:8px;">اقتراحات سريعة:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          ${EXAMPLES.map(ex => `<button type="button" onclick="const t=document.getElementById('mjob-text'); t.value = t.value ? t.value + '، ' + '${ex}' : '${ex}'; t.dispatchEvent(new Event('input'));" style="border:1px solid var(--border);background:var(--surface2);color:var(--primary);font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;cursor:pointer;transition:all var(--transition);" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface2)'">${ex}</button>`).join('')}
+        </div>
+      </div>`,
+    showCancelButton: true, confirmButtonText: '<i class="fas fa-check"></i> حفظ الوظيفة', cancelButtonText: 'إلغاء',
+    confirmButtonColor: '#0d2137', cancelButtonColor: '#94a3b8',
+    focusConfirm: false,
+    customClass: { popup: 'mjob-swal-popup' },
+    didOpen: () => { document.getElementById('mjob-text').focus(); },
     preConfirm: () => {
       const text = document.getElementById('mjob-text').value.trim();
       if (!text) { Swal.showValidationMessage('يرجى كتابة وصف الوظيفة'); return false; }
@@ -7893,6 +7924,23 @@ function addMaintJob() {
       MaintenanceRepository.addMaintJob(job).then(() => {
         logMaintDraft('add', `تمت إضافة وظيفة رقم ${job.jobNum} في سجل الصيانة: ${job.text}`, null, job);
         showToast('تمت إضافة الوظيفة', 'success'); renderMaintLog();
+      });
+    }
+  });
+}
+function deleteMaintJob(id) {
+  if (!mlogCanDelete()) { showToast('حذف الوظائف متاح للمدير أو المشرف فقط', 'error'); return; }
+  ensureMaintenanceData();
+  const job = appData.maintenance.jobsLog.find(j => j.id === id);
+  if (!job) return;
+  Swal.fire({
+    title: 'حذف الوظيفة', text: `هل تريد حذف الوظيفة رقم ${job.jobNum || ''}؟`, icon: 'warning',
+    showCancelButton: true, confirmButtonText: 'نعم، احذف', cancelButtonText: 'إلغاء', confirmButtonColor: '#ef4444'
+  }).then(r => {
+    if (r.isConfirmed) {
+      MaintenanceRepository.deleteMaintJob(id).then(() => {
+        logMaintDraft('delete', `تم حذف وظيفة رقم ${job.jobNum || ''} من سجل الصيانة: ${job.text}`, job, null);
+        showToast('تم الحذف', 'success'); renderMaintLog();
       });
     }
   });

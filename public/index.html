@@ -452,65 +452,36 @@ tfoot td { padding: 11px 14px; }
   background: linear-gradient(90deg, var(--gold), var(--gold-light));
 }
 .agent-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
-/* ===== Maintenance Log Book (سجل الصيانة) ===== */
+/* ===== سجل الصيانة: قائمة الوظائف (Maintenance Jobs Log) ===== */
 .mlog-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
 .mlog-crumbs { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted); flex-wrap:wrap; }
-.mlog-crumbs .mlog-crumb-link { color:var(--primary); font-weight:700; cursor:pointer; }
-.mlog-crumbs .mlog-crumb-link:hover { text-decoration:underline; }
-.mlog-back-btn {
-  display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:var(--radius-sm);
-  background:var(--surface2); border:1px solid var(--border); color:var(--text); font-size:13px; font-weight:700;
-  cursor:pointer; transition:all var(--transition);
-}
-.mlog-back-btn:hover { background:var(--border); }
 .mlog-add-btn {
   display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:var(--radius-sm);
   background:linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%); color:var(--white);
   border:none; font-size:13.5px; font-weight:800; cursor:pointer; box-shadow:var(--shadow); transition:all var(--transition);
 }
 .mlog-add-btn:hover { transform:translateY(-2px); box-shadow:var(--shadow-lg); }
-.mlog-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:18px; }
-.mlog-card {
-  position:relative; border-radius:var(--radius); padding:22px 18px; cursor:pointer; overflow:hidden;
-  color:var(--white); box-shadow:var(--shadow); transition:all var(--transition); min-height:120px;
-  display:flex; flex-direction:column; justify-content:space-between;
-}
-.mlog-card:hover { transform:translateY(-5px); box-shadow:var(--shadow-lg); }
-.mlog-card .mlog-card-icon { font-size:26px; opacity:.92; margin-bottom:10px; }
-.mlog-card .mlog-card-title { font-size:16px; font-weight:800; line-height:1.35; }
-.mlog-card .mlog-card-meta { font-size:12px; opacity:.9; margin-top:8px; display:flex; align-items:center; gap:6px; }
-.mlog-card .mlog-card-del {
-  position:absolute; top:10px; left:10px; width:26px; height:26px; border-radius:50%; border:none;
-  background:rgba(255,255,255,.22); color:var(--white); cursor:pointer; font-size:12px; display:flex;
-  align-items:center; justify-content:center; transition:all var(--transition);
-}
-.mlog-card .mlog-card-del:hover { background:rgba(239,68,68,.85); }
-.mlog-search-bar { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
-.mlog-notes-list { display:flex; flex-direction:column; gap:10px; }
+.mlog-notes-list { display:flex; flex-direction:column; gap:12px; }
 .mlog-note-row {
-  display:flex; align-items:flex-start; gap:14px; padding:14px 16px; background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--radius-sm); border-right:4px solid var(--gold); box-shadow:var(--shadow); transition:all var(--transition);
+  display:flex; align-items:center; gap:14px; padding:15px 18px; border-radius:var(--radius-sm); box-shadow:var(--shadow);
+  transition:all var(--transition); color:var(--white); overflow:hidden; position:relative;
 }
-.mlog-note-row:hover { box-shadow:var(--shadow-lg); }
+.mlog-note-row:hover { transform:translateY(-3px); box-shadow:var(--shadow-lg); }
 .mlog-note-icon {
-  width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center;
-  font-size:15px; color:var(--white); flex-shrink:0;
+  width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+  font-size:17px; color:var(--white); flex-shrink:0; background:rgba(255,255,255,.22);
 }
 .mlog-note-body { flex:1; min-width:0; }
-.mlog-note-text { font-size:14px; color:var(--text); font-weight:600; line-height:1.6; word-break:break-word; }
-.mlog-note-tags { display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
-.mlog-note-cat {
-  font-size:11px; font-weight:700; padding:2px 10px; border-radius:20px; background:var(--surface2); color:var(--primary);
-  border:1px solid var(--border);
+.mlog-note-text { font-size:14.5px; color:var(--white); font-weight:700; line-height:1.6; word-break:break-word; }
+.mlog-note-tags { display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap; }
+.mlog-note-user { font-size:11.5px; color:rgba(255,255,255,.9); white-space:nowrap; }
+.mlog-note-time-block {
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; flex-shrink:0;
+  background:rgba(255,255,255,.18); border-radius:var(--radius-sm); padding:8px 14px; min-width:92px; text-align:center;
 }
-.mlog-note-time { font-size:11.5px; color:var(--text-light); white-space:nowrap; }
-.mlog-note-time i { margin-left:4px; }
-.mlog-note-user { font-size:11.5px; color:var(--info); white-space:nowrap; }
-.mlog-note-del {
-  border:none; background:transparent; color:var(--text-light); cursor:pointer; font-size:14px; padding:4px 6px; border-radius:6px;
-  transition:all var(--transition); flex-shrink:0;
-}
-.mlog-note-del:hover { background:rgba(239,68,68,.12); color:var(--danger); }
+.mlog-note-time-block .mlog-day { font-size:12px; font-weight:800; color:var(--white); }
+.mlog-note-time-block .mlog-time { font-size:13px; font-weight:800; color:var(--white); }
+.mlog-note-time-block .mlog-date { font-size:10.5px; color:rgba(255,255,255,.85); }
 .online-avatar-circle {
   width: 28px; height: 28px; border-radius: 50%;
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
@@ -2638,7 +2609,7 @@ body.view-only-mode .vac-status-btn {
         <div class="section-header">
           <div>
             <div class="section-title">سجل الصيانة</div>
-            <div class="section-subtitle" id="maintLogSubtitle">دفتر ملاحظات الصيانة لكل عقار ووحدة</div>
+            <div class="section-subtitle" id="maintLogSubtitle">سجل الوظائف والمهام الخاصة بالصيانة</div>
           </div>
           <button class="btn btn-gold btn-sm no-print" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
         </div>
@@ -2961,19 +2932,21 @@ function mergeAppData(fresh, local) {
   // رغم وجود 36+ سجلًا فعليًا في Firestore. مصدرها الحقيقي هو Collection مستقلة
   // (نفس requests/schedules)، لذلك نأخذها من "local" (النسخة الحية المحدَّثة
   // عبر onRealtimeUpdate الخاص بها) تمامًا كما نفعل مع requests/schedules.
-  // ملاحظة إصلاح: logBook (دفتر سجل الصيانة: عقارات/وحدات <- شقق <- ملاحظات)
-  // لا يملك Collection مستقلة خاصة به (على عكس requests/schedules)، بل يعيش
-  // فقط داخل هذا المستند الرئيسي. لذلك يجب أخذه من "local" (النسخة الحية في
-  // appData بعد أي إضافة/حذف عبر MaintenanceRepository) وليس إسقاطه بعدم
-  // ذكره هنا إطلاقًا — وإلا فكل save() لأي قسم آخر كان يعيد بناء
-  // appData.maintenance بالكامل بلا logBook فتختفي البيانات فور أي حفظ.
+  // ملاحظة إصلاح: logBook (دفتر سجل الصيانة القديم) و jobsLog (سجل الصيانة
+  // الحالي: قائمة الوظائف) لا يملكان Collection مستقلة خاصة بهما (على عكس
+  // requests/schedules)، بل يعيشان فقط داخل هذا المستند الرئيسي. لذلك يجب
+  // أخذهما من "local" (النسخة الحية في appData بعد أي إضافة عبر
+  // MaintenanceRepository) وليس إسقاطهما بعدم ذكرهما هنا إطلاقًا — وإلا فكل
+  // save() لأي قسم آخر كان يعيد بناء appData.maintenance بالكامل بلا هذين
+  // الحقلين فتختفي البيانات فور أي حفظ.
   merged.maintenance = {
     requests: (local.maintenance||{}).requests || [],
     schedules: (local.maintenance||{}).schedules || [],
     sheetRequests: (local.maintenance||{}).sheetRequests || [],
     log: mergeLogArrays((fresh.maintenance||{}).log, (local.maintenance||{}).log, 500, logDeletedIds.maintenance),
     assigneeMemory: [...new Set([...(fresh.maintenance||{}).assigneeMemory||[], ...(local.maintenance||{}).assigneeMemory||[]])],
-    logBook: (local.maintenance||{}).logBook || (fresh.maintenance||{}).logBook || []
+    logBook: (local.maintenance||{}).logBook || (fresh.maintenance||{}).logBook || [],
+    jobsLog: (local.maintenance||{}).jobsLog || (fresh.maintenance||{}).jobsLog || []
   };
   if (local.users || fresh.users) {
     merged.users = merged.users || { list: [] };
@@ -7101,15 +7074,19 @@ function createFirestoreRepository({ migrationSection, deletionSection, getLocal
 
 
 function ensureMaintenanceData() {
-  if (!appData.maintenance) appData.maintenance = { requests: [], schedules: [], log: [], assigneeMemory: [], sheetRequests: [], logBook: [] };
+  if (!appData.maintenance) appData.maintenance = { requests: [], schedules: [], log: [], assigneeMemory: [], sheetRequests: [], logBook: [], jobsLog: [] };
   if (!appData.maintenance.requests) appData.maintenance.requests = [];
   if (!appData.maintenance.schedules) appData.maintenance.schedules = [];
   if (!appData.maintenance.log) appData.maintenance.log = [];
   if (!appData.maintenance.assigneeMemory) appData.maintenance.assigneeMemory = [];
   if (!appData.maintenance.sheetRequests) appData.maintenance.sheetRequests = [];
-  // دفتر سجل الصيانة: عقارات/وحدات <- شقق/وحدات فرعية <- ملاحظات
+  // دفتر سجل الصيانة القديم (عقارات/وحدات <- شقق <- ملاحظات) — لم يعد
+  // مستخدَمًا في الواجهة بعد الاستبدال بقائمة الوظائف، لكن نُبقي الحقل هنا
+  // فقط حتى لا تُفقد أي بيانات قديمة محفوظة مسبقًا في Firebase لأي مستخدم.
   if (!appData.maintenance.logBook) appData.maintenance.logBook = [];
   appData.maintenance.logBook.forEach(b => { if (!b.units) b.units = []; b.units.forEach(u => { if (!u.notes) u.notes = []; }); });
+  // سجل الصيانة الحالي: قائمة وظائف بسيطة (تُضاف فقط ولا تُحذف)
+  if (!appData.maintenance.jobsLog) appData.maintenance.jobsLog = [];
 }
 // ============================================================
 // ===== MaintenanceRepository: مبني على BaseRepository =====
@@ -7247,43 +7224,16 @@ const MaintenanceRepository = {
     appData.maintenance.log = [];
     await save();
   },
-  // ===== دفتر سجل الصيانة (عقارات/وحدات <- شقق <- ملاحظات) =====
-  // ملاحظة أداء (إصلاح البطء): كانت كل عملية إضافة/حذف هنا تنتظر await save()
-  // قبل أن تُحل الـ Promise، وsave() قد يستغرق ~15 ثانية (رحلة كاملة إلى
-  // Firebase ذهابًا وإيابًا: load → merge → write) — فتبقى الواجهة معلّقة طوال
-  // هذه المدة قبل أن يظهر أي تغيير للمستخدم. الآن: التعديل يُطبَّق على appData
-  // فورًا وتُحل الـ Promise فورًا (فيُحدَّث DOM في نفس اللحظة)، بينما save()
-  // تُجدوَل في الخلفية عبر مؤقّت debounce (mlogScheduleSave) حتى لا تتراكم عدة
-  // نداءات save() متزامنة عند تعديلات متتالية سريعة (مثل إضافة عدة ملاحظات
-  // خلف بعضها) — تُدمج في نداء save() واحد مؤجَّل قليلًا. طابور الحفظ الداخلي
-  // في save() نفسها أصبح الآن مُدمِجًا (coalescing) بحيث لا يُنفَّذ أكثر من
-  // رحلة إضافية واحدة لأي عدد من النداءات المتراكمة أثناء رحلة جارية.
-  addLogBookBuilding(b) { this.ensure(); appData.maintenance.logBook.push(b); mlogScheduleSave(); return Promise.resolve(b); },
-  deleteLogBookBuilding(id) { this.ensure(); appData.maintenance.logBook = appData.maintenance.logBook.filter(x => x.id !== id); mlogScheduleSave(); return Promise.resolve(); },
-  addLogBookUnit(buildingId, u) {
-    this.ensure();
-    const b = appData.maintenance.logBook.find(x => x.id === buildingId); if (!b) return Promise.resolve(null);
-    b.units.push(u); mlogScheduleSave(); return Promise.resolve(u);
-  },
-  deleteLogBookUnit(buildingId, unitId) {
-    this.ensure();
-    const b = appData.maintenance.logBook.find(x => x.id === buildingId); if (!b) return Promise.resolve();
-    b.units = b.units.filter(u => u.id !== unitId); mlogScheduleSave(); return Promise.resolve();
-  },
-  addLogBookNote(buildingId, unitId, note) {
-    this.ensure();
-    const b = appData.maintenance.logBook.find(x => x.id === buildingId); if (!b) return Promise.resolve(null);
-    const u = b.units.find(x => x.id === unitId); if (!u) return Promise.resolve(null);
-    u.notes.unshift(note); mlogScheduleSave(); return Promise.resolve(note);
-  },
-  deleteLogBookNote(buildingId, unitId, noteId) {
-    this.ensure();
-    const b = appData.maintenance.logBook.find(x => x.id === buildingId); if (!b) return Promise.resolve();
-    const u = b.units.find(x => x.id === unitId); if (!u) return Promise.resolve();
-    u.notes = u.notes.filter(n => n.id !== noteId); mlogScheduleSave(); return Promise.resolve();
-  }
+  // ===== سجل الصيانة: قائمة الوظائف (تُضاف فقط ولا تُحذف أبدًا) =====
+  // ملاحظة أداء: التعديل يُطبَّق على appData فورًا وتُحل الـ Promise فورًا
+  // (فيُحدَّث DOM في نفس اللحظة)، بينما save() الفعلية تُجدوَل في الخلفية عبر
+  // مؤقّت debounce (mlogScheduleSave) حتى لا تتراكم عدة نداءات save() متزامنة
+  // عند تعديلات متتالية سريعة. طابور الحفظ الداخلي في save() نفسها مُدمِج
+  // (coalescing) بحيث لا يُنفَّذ أكثر من رحلة إضافية واحدة لأي عدد من
+  // النداءات المتراكمة أثناء رحلة جارية.
+  addMaintJob(job) { this.ensure(); appData.maintenance.jobsLog.unshift(job); mlogScheduleSave(); return Promise.resolve(job); }
 };
-// مؤقّت debounce مخصص لحفظ دفتر سجل الصيانة: يؤجَّل نداء save() الفعلي قليلًا
+// مؤقّت debounce مخصص لحفظ سجل الصيانة: يؤجَّل نداء save() الفعلي قليلًا
 // (600ms) في كل مرة يحدث فيها تعديل جديد، فإن حدثت عدة تعديلات متتالية خلال
 // هذه المهلة تُدمج كلها في نداء save() واحد فقط بدل نداء منفصل لكل تعديل.
 let _mlogSaveTimer = null;
@@ -7291,7 +7241,7 @@ function mlogScheduleSave() {
   if (_mlogSaveTimer) clearTimeout(_mlogSaveTimer);
   _mlogSaveTimer = setTimeout(() => {
     _mlogSaveTimer = null;
-    save().catch(e => console.error('[MaintenanceRepository logBook save]', e));
+    save().catch(e => console.error('[MaintenanceRepository jobsLog save]', e));
   }, 600);
 }
 function logMaintDraft(action, details, before, after) {
@@ -7844,12 +7794,11 @@ function deleteMaintSchedule(id) {
   });
 }
 // ============================================================
-// ===== سجل الصيانة: دفتر عقارات/وحدات <- شقق <- ملاحظات =====
+// ===== سجل الصيانة: قائمة الوظائف (Maintenance Jobs Log) =====
 // ============================================================
-let maintLogView = 'buildings'; // 'buildings' | 'units' | 'notes'
-let maintLogCurrentBuildingId = null;
-let maintLogCurrentUnitId = null;
-let maintLogSearchTerm = '';
+// ملاحظة: هذا القسم استُبدل بالكامل بناءً على طلب المستخدم — لم يعد دفتر
+// عقارات/وحدات/ملاحظات، بل قائمة وظائف بسيطة: تُضاف فقط ولا تُحذف أبدًا،
+// وتُعرض كصفوف ملونة، وفي أقصى يسار كل صف يظهر يوم ووقت وتاريخ الإضافة.
 const MLOG_PALETTE = [
   'linear-gradient(135deg,#0d2137 0%,#1a3a5c 100%)',
   'linear-gradient(135deg,#0c4a6e 0%,#0ea5e9 100%)',
@@ -7860,307 +7809,77 @@ const MLOG_PALETTE = [
   'linear-gradient(135deg,#831843 0%,#ec4899 100%)',
   'linear-gradient(135deg,#134e4a 0%,#14b8a6 100%)'
 ];
-// كلمات مفتاحية لتصنيف الملاحظات وتلوين أيقونتها تلقائيًا
-const MLOG_CATEGORIES = [
-  { key: 'مكيفات', match: ['مكيف','تكييف','تبريد'], icon: 'fa-snowflake', color: '#0ea5e9' },
-  { key: 'كهرباء', match: ['كهرب','لمبة','مفتاح كهربائي','دائرة'], icon: 'fa-bolt', color: '#f59e0b' },
-  { key: 'سباكة', match: ['سباك','مياه','تسريب','مواسير','صرف'], icon: 'fa-faucet', color: '#3b82f6' },
-  { key: 'أبواب ونوافذ', match: ['باب','نافذة','زجاج','قفل'], icon: 'fa-door-closed', color: '#8b5cf6' },
-  { key: 'دهانات', match: ['دهان','طلاء','رطوبة'], icon: 'fa-paint-roller', color: '#ec4899' },
-  { key: 'صيانة عامة', match: ['صيانة عامة','عام'], icon: 'fa-toolbox', color: 'var(--primary)' }
-];
 function mlogCanEdit() { return !!(currentUser && (currentUser.role === 'مدير' || currentUser.role === 'مشرف')); }
-function mlogDetectCategory(text) {
-  const t = (text || '').toLowerCase();
-  for (const c of MLOG_CATEGORIES) { if (c.match.some(k => t.includes(k))) return c; }
-  return { key: 'ملاحظة عامة', icon: 'fa-note-sticky', color: 'var(--gold-dark)' };
-}
-function mlogFmtDateTime(iso) {
-  if (!iso) return '';
-  try { const d = new Date(iso); return d.toLocaleDateString('ar-SA') + ' - ' + d.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }); } catch { return ''; }
+function mlogFmtParts(iso) {
+  if (!iso) return { day: '', time: '', date: '' };
+  try {
+    const d = new Date(iso);
+    return {
+      day: d.toLocaleDateString('ar-SA', { weekday: 'long' }),
+      time: d.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+      date: d.toLocaleDateString('ar-SA')
+    };
+  } catch { return { day: '', time: '', date: '' }; }
 }
 function renderMaintLog() {
   ensureMaintenanceData();
-  if (maintLogView === 'units') return renderMaintLogUnits();
-  if (maintLogView === 'notes') return renderMaintLogNotes();
-  return renderMaintLogBuildings();
-}
-function renderMaintLogBuildings() {
-  ensureMaintenanceData();
   const sub = document.getElementById('maintLogSubtitle');
-  if (sub) sub.textContent = 'دفتر ملاحظات الصيانة لكل عقار ووحدة';
-  const canEdit = mlogCanEdit();
-  const list = appData.maintenance.logBook;
-  const el = document.getElementById('maintLogContent');
-  let html = `<div class="mlog-toolbar">
-      <div class="mlog-crumbs"><i class="fas fa-building"></i> العقارات / الوحدات</div>
-      ${canEdit ? `<button class="mlog-add-btn no-print" onclick="addMlogBuilding()"><i class="fas fa-plus"></i> إضافة وحدة</button>` : ''}
-    </div>`;
-  if (!list.length) {
-    html += '<div class="card"><div class="empty-state"><i class="fas fa-building"></i><h3>لا توجد عقارات/وحدات بعد</h3><p>ابدأ بإضافة أول عقار أو وحدة من زر "إضافة وحدة"</p></div></div>';
-    el.innerHTML = html; el.insertAdjacentHTML('beforeend', mlogRenderAllNotesFeed()); return;
-  }
-  html += '<div class="mlog-grid">' + list.map((b, i) => {
-    const unitCount = b.units.length;
-    const noteCount = b.units.reduce((s, u) => s + u.notes.length, 0);
-    return `<div class="mlog-card" style="background:${MLOG_PALETTE[i % MLOG_PALETTE.length]};" onclick="openMlogBuilding('${b.id}')">
-      ${canEdit ? `<button class="mlog-card-del no-print" onclick="event.stopPropagation();deleteMlogBuilding('${b.id}')" title="حذف"><i class="fas fa-times"></i></button>` : ''}
-      <div><div class="mlog-card-icon"><i class="fas fa-building"></i></div>
-      <div class="mlog-card-title">${b.name}</div></div>
-      <div class="mlog-card-meta"><i class="fas fa-door-open"></i> ${unitCount} وحدة/شقة &nbsp;•&nbsp; <i class="fas fa-note-sticky"></i> ${noteCount} ملاحظة</div>
-    </div>`;
-  }).join('') + '</div>';
-  html += mlogRenderAllNotesFeed();
-  el.innerHTML = html;
-}
-// تجميع كل الملاحظات من جميع العقارات/الوحدات في قائمة واحدة، مرتبة تنازليًا
-// (الأحدث أعلى)، مع توضيح اسم العقار والشقة/الوحدة التي تخص كل ملاحظة —
-// تُعرض أسفل بطاقات العقارات في المستوى الأول مباشرة.
-function mlogCollectAllNotes() {
-  ensureMaintenanceData();
-  const rows = [];
-  appData.maintenance.logBook.forEach(b => {
-    b.units.forEach(u => {
-      u.notes.forEach(n => rows.push({ note: n, buildingId: b.id, buildingName: b.name, unitId: u.id, unitName: u.name }));
-    });
-  });
-  rows.sort((a, c) => {
-    const ta = a.note.createdAt ? new Date(a.note.createdAt).getTime() : 0;
-    const tc = c.note.createdAt ? new Date(c.note.createdAt).getTime() : 0;
-    return tc - ta; // الأحدث أولًا
-  });
-  return rows;
-}
-function mlogRenderAllNotesFeed() {
-  const rows = mlogCollectAllNotes();
-  let html = `<div style="margin-top:26px;">
-    <div class="mlog-toolbar" style="margin-bottom:12px;">
-      <div class="mlog-crumbs"><i class="fas fa-list-check"></i> جميع الملاحظات (الأحدث أولًا)</div>
-    </div>`;
-  if (!rows.length) {
-    html += '<div class="card"><div class="empty-state"><i class="fas fa-note-sticky"></i><h3>لا توجد ملاحظات بعد</h3><p>ستظهر هنا كل ملاحظات الصيانة من جميع العقارات فور إضافتها</p></div></div></div>';
-    return html;
-  }
-  html += '<div class="mlog-notes-list">' + rows.map(r => {
-    const n = r.note;
-    const cat = mlogDetectCategory(n.category || n.text);
-    return `<div class="mlog-note-row" style="cursor:pointer;" onclick="openMlogBuilding('${r.buildingId}');openMlogUnit('${r.unitId}');">
-      <div class="mlog-note-icon" style="background:${cat.color};"><i class="fas ${cat.icon}"></i></div>
-      <div class="mlog-note-body">
-        <div class="mlog-note-text">${n.text}</div>
-        <div class="mlog-note-tags">
-          <span class="mlog-note-cat">${n.category || cat.key}</span>
-          <span class="mlog-note-cat" style="background:var(--surface2);"><i class="fas fa-building"></i> ${r.buildingName} <i class="fas fa-angle-left"></i> ${r.unitName}</span>
-          <span class="mlog-note-time"><i class="fas fa-clock"></i>${mlogFmtDateTime(n.createdAt)}</span>
-          <span class="mlog-note-user"><i class="fas fa-user"></i> ${n.user || 'غير معروف'}</span>
-        </div>
-      </div>
-    </div>`;
-  }).join('') + '</div></div>';
-  return html;
-}
-function renderMaintLogUnits() {
-  ensureMaintenanceData();
-  const b = appData.maintenance.logBook.find(x => x.id === maintLogCurrentBuildingId);
-  if (!b) { maintLogView = 'buildings'; return renderMaintLogBuildings(); }
-  const sub = document.getElementById('maintLogSubtitle');
-  if (sub) sub.textContent = 'وحدات/شقق: ' + b.name;
+  if (sub) sub.textContent = 'سجل الوظائف والمهام الخاصة بالصيانة';
   const canEdit = mlogCanEdit();
   const el = document.getElementById('maintLogContent');
   let html = `<div class="mlog-toolbar">
-      <div class="mlog-crumbs">
-        <span class="mlog-crumb-link" onclick="backToMlogBuildings()"><i class="fas fa-building"></i> العقارات/الوحدات</span>
-        <i class="fas fa-angle-left"></i> <span>${b.name}</span>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="mlog-back-btn no-print" onclick="backToMlogBuildings()"><i class="fas fa-arrow-right"></i> رجوع</button>
-        ${canEdit ? `<button class="mlog-add-btn no-print" onclick="addMlogUnit()"><i class="fas fa-plus"></i> إضافة شقة/وحدة</button>` : ''}
-      </div>
+      <div class="mlog-crumbs"><i class="fas fa-briefcase"></i> سجل الوظائف</div>
+      ${canEdit ? `<button class="mlog-add-btn no-print" onclick="addMaintJob()"><i class="fas fa-plus"></i> إضافة وظيفة</button>` : ''}
     </div>`;
-  if (!b.units.length) {
-    html += '<div class="card"><div class="empty-state"><i class="fas fa-door-open"></i><h3>لا توجد شقق/وحدات بعد</h3><p>أضف أول شقة أو وحدة داخل هذا العقار</p></div></div>';
+  // الأحدث دائمًا أعلى القائمة
+  const jobs = [...appData.maintenance.jobsLog].sort((a, c) => {
+    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const tc = c.createdAt ? new Date(c.createdAt).getTime() : 0;
+    return tc - ta;
+  });
+  if (!jobs.length) {
+    html += '<div class="card"><div class="empty-state"><i class="fas fa-briefcase"></i><h3>لا توجد وظائف مسجّلة بعد</h3><p>أضف أول وظيفة من زر "إضافة وظيفة"</p></div></div>';
     el.innerHTML = html; return;
   }
-  html += '<div class="mlog-grid">' + b.units.map((u, i) => {
-    return `<div class="mlog-card" style="background:${MLOG_PALETTE[(i + 3) % MLOG_PALETTE.length]};" onclick="openMlogUnit('${u.id}')">
-      ${canEdit ? `<button class="mlog-card-del no-print" onclick="event.stopPropagation();deleteMlogUnit('${u.id}')" title="حذف"><i class="fas fa-times"></i></button>` : ''}
-      <div><div class="mlog-card-icon"><i class="fas fa-door-open"></i></div>
-      <div class="mlog-card-title">${u.name}</div></div>
-      <div class="mlog-card-meta"><i class="fas fa-note-sticky"></i> ${u.notes.length} ملاحظة</div>
-    </div>`;
-  }).join('') + '</div>';
-  el.innerHTML = html;
-}
-function renderMaintLogNotes() {
-  ensureMaintenanceData();
-  const b = appData.maintenance.logBook.find(x => x.id === maintLogCurrentBuildingId);
-  if (!b) { maintLogView = 'buildings'; return renderMaintLogBuildings(); }
-  const u = b.units.find(x => x.id === maintLogCurrentUnitId);
-  if (!u) { maintLogView = 'units'; return renderMaintLogUnits(); }
-  const sub = document.getElementById('maintLogSubtitle');
-  if (sub) sub.textContent = b.name + ' - ' + u.name;
-  const canEdit = mlogCanEdit();
-  const el = document.getElementById('maintLogContent');
-  let html = `<div class="mlog-toolbar">
-      <div class="mlog-crumbs">
-        <span class="mlog-crumb-link" onclick="backToMlogBuildings()"><i class="fas fa-building"></i> العقارات/الوحدات</span>
-        <i class="fas fa-angle-left"></i>
-        <span class="mlog-crumb-link" onclick="backToMlogUnits()">${b.name}</span>
-        <i class="fas fa-angle-left"></i> <span>${u.name}</span>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="mlog-back-btn no-print" onclick="backToMlogUnits()"><i class="fas fa-arrow-right"></i> رجوع</button>
-        ${canEdit ? `<button class="mlog-add-btn no-print" onclick="addMlogNote()"><i class="fas fa-plus"></i> إضافة ملاحظة</button>` : ''}
-      </div>
-    </div>
-    <div class="mlog-search-bar no-print">
-      <div style="position:relative;flex:1;min-width:220px;">
-        <i class="fas fa-search" style="position:absolute;top:50%;transform:translateY(-50%);right:14px;color:var(--text-light);"></i>
-        <input class="form-control" style="padding-right:36px;" id="mlogSearchInput" value="${maintLogSearchTerm.replace(/"/g,'&quot;')}" placeholder="ابحث في الملاحظات (مثال: مكيفات، سباكة، كهرباء...)" oninput="filterMlogNotes(this.value)">
-      </div>
-    </div>`;
-  let notes = [...u.notes];
-  if (maintLogSearchTerm.trim()) {
-    const term = maintLogSearchTerm.trim().toLowerCase();
-    notes = notes.filter(n => (n.text || '').toLowerCase().includes(term) || (n.category || '').toLowerCase().includes(term));
-  }
-  if (!notes.length) {
-    html += `<div class="card"><div class="empty-state"><i class="fas fa-note-sticky"></i><h3>${u.notes.length ? 'لا توجد نتائج مطابقة' : 'لا توجد ملاحظات بعد'}</h3><p>${u.notes.length ? 'جرّب كلمة بحث أخرى' : 'أضف أول ملاحظة صيانة لهذه الوحدة'}</p></div></div>`;
-    el.innerHTML = html; return;
-  }
-  html += '<div class="mlog-notes-list">' + notes.map(n => {
-    const cat = mlogDetectCategory(n.category || n.text);
-    return `<div class="mlog-note-row">
-      <div class="mlog-note-icon" style="background:${cat.color};"><i class="fas ${cat.icon}"></i></div>
+  html += '<div class="mlog-notes-list">' + jobs.map((j, i) => {
+    const parts = mlogFmtParts(j.createdAt);
+    return `<div class="mlog-note-row" style="background:${MLOG_PALETTE[i % MLOG_PALETTE.length]};">
+      <div class="mlog-note-icon"><i class="fas fa-briefcase"></i></div>
       <div class="mlog-note-body">
-        <div class="mlog-note-text">${n.text}</div>
+        <div class="mlog-note-text">${j.text}</div>
         <div class="mlog-note-tags">
-          <span class="mlog-note-cat">${n.category || cat.key}</span>
-          <span class="mlog-note-time"><i class="fas fa-clock"></i>${mlogFmtDateTime(n.createdAt)}</span>
-          <span class="mlog-note-user"><i class="fas fa-user"></i> ${n.user || 'غير معروف'}</span>
+          <span class="mlog-note-user"><i class="fas fa-user"></i> ${j.user || 'غير معروف'}</span>
         </div>
       </div>
-      ${canEdit ? `<button class="mlog-note-del no-print" onclick="deleteMlogNote('${n.id}')" title="حذف الملاحظة"><i class="fas fa-trash"></i></button>` : ''}
+      <div class="mlog-note-time-block">
+        <div class="mlog-day">${parts.day}</div>
+        <div class="mlog-time">${parts.time}</div>
+        <div class="mlog-date">${parts.date}</div>
+      </div>
     </div>`;
   }).join('') + '</div>';
   el.innerHTML = html;
 }
-function filterMlogNotes(val) { maintLogSearchTerm = val; renderMaintLogNotes(); }
-function openMlogBuilding(id) { maintLogCurrentBuildingId = id; maintLogCurrentUnitId = null; maintLogView = 'units'; renderMaintLog(); }
-function openMlogUnit(id) { maintLogCurrentUnitId = id; maintLogView = 'notes'; maintLogSearchTerm = ''; renderMaintLog(); }
-function backToMlogBuildings() { maintLogView = 'buildings'; maintLogCurrentBuildingId = null; maintLogCurrentUnitId = null; renderMaintLog(); }
-function backToMlogUnits() { maintLogView = 'units'; maintLogCurrentUnitId = null; maintLogSearchTerm = ''; renderMaintLog(); }
-function addMlogBuilding() {
+function addMaintJob() {
   if (!mlogCanEdit()) { showToast('هذا الإجراء متاح للمدير أو المشرف فقط', 'error'); return; }
   Swal.fire({
-    title: 'إضافة وحدة (عقار)',
+    title: 'إضافة وظيفة',
     html: `<div style="text-align:right;direction:rtl;">
-      <div style="margin-bottom:10px;"><label style="font-size:12px;display:block;margin-bottom:4px;">اسم العقار/الوحدة</label><input class="swal2-input" id="mlb-name" style="direction:rtl;" placeholder="مثال: برج الياسمين"></div>
+      <div style="margin-bottom:10px;"><label style="font-size:12px;display:block;margin-bottom:4px;">وصف الوظيفة/المهمة</label>
+        <textarea class="swal2-textarea" id="mjob-text" style="direction:rtl;" placeholder="مثال: صيانة مكيفات الدور الثاني في مجمع الياسمين"></textarea></div>
     </div>`,
     showCancelButton: true, confirmButtonText: 'حفظ', cancelButtonText: 'إلغاء', confirmButtonColor: '#0d2137',
     preConfirm: () => {
-      const name = document.getElementById('mlb-name').value.trim();
-      if (!name) { Swal.showValidationMessage('يرجى إدخال الاسم'); return false; }
-      return { name };
+      const text = document.getElementById('mjob-text').value.trim();
+      if (!text) { Swal.showValidationMessage('يرجى كتابة وصف الوظيفة'); return false; }
+      return { text };
     }
   }).then(r => {
     if (r.isConfirmed) {
-      const b = { id: uid(), name: r.value.name, units: [], createdAt: new Date().toISOString() };
-      MaintenanceRepository.addLogBookBuilding(b).then(() => {
-        logMaintDraft('add', `تمت إضافة عقار/وحدة في سجل الصيانة: ${b.name}`, null, b);
-        showToast('تمت الإضافة', 'success'); renderMaintLog();
-      });
-    }
-  });
-}
-function deleteMlogBuilding(id) {
-  if (!mlogCanEdit()) { showToast('هذا الإجراء متاح للمدير أو المشرف فقط', 'error'); return; }
-  const b = appData.maintenance.logBook.find(x => x.id === id); if (!b) return;
-  Swal.fire({ title: 'حذف', text: `هل تريد حذف "${b.name}" وكل ما بداخله من شقق وملاحظات؟`, icon: 'warning', showCancelButton: true, confirmButtonText: 'نعم، احذف', cancelButtonText: 'إلغاء', confirmButtonColor: '#ef4444' }).then(r => {
-    if (r.isConfirmed) {
-      MaintenanceRepository.deleteLogBookBuilding(id).then(() => {
-        logMaintDraft('delete', `تم حذف عقار/وحدة من سجل الصيانة: ${b.name}`, b, null);
-        showToast('تم الحذف', 'success'); renderMaintLog();
-      });
-    }
-  });
-}
-function addMlogUnit() {
-  if (!mlogCanEdit()) { showToast('هذا الإجراء متاح للمدير أو المشرف فقط', 'error'); return; }
-  const b = appData.maintenance.logBook.find(x => x.id === maintLogCurrentBuildingId); if (!b) return;
-  Swal.fire({
-    title: 'إضافة شقة/وحدة',
-    html: `<div style="text-align:right;direction:rtl;">
-      <div style="margin-bottom:10px;"><label style="font-size:12px;display:block;margin-bottom:4px;">اسم الشقة/الوحدة</label><input class="swal2-input" id="mlu-name" style="direction:rtl;" placeholder="مثال: شقة 101"></div>
-    </div>`,
-    showCancelButton: true, confirmButtonText: 'حفظ', cancelButtonText: 'إلغاء', confirmButtonColor: '#0d2137',
-    preConfirm: () => {
-      const name = document.getElementById('mlu-name').value.trim();
-      if (!name) { Swal.showValidationMessage('يرجى إدخال الاسم'); return false; }
-      return { name };
-    }
-  }).then(r => {
-    if (r.isConfirmed) {
-      const u = { id: uid(), name: r.value.name, notes: [], createdAt: new Date().toISOString() };
-      MaintenanceRepository.addLogBookUnit(b.id, u).then(() => {
-        logMaintDraft('add', `تمت إضافة شقة/وحدة "${u.name}" داخل "${b.name}"`, null, u);
-        showToast('تمت الإضافة', 'success'); renderMaintLog();
-      });
-    }
-  });
-}
-function deleteMlogUnit(id) {
-  if (!mlogCanEdit()) { showToast('هذا الإجراء متاح للمدير أو المشرف فقط', 'error'); return; }
-  const b = appData.maintenance.logBook.find(x => x.id === maintLogCurrentBuildingId); if (!b) return;
-  const u = b.units.find(x => x.id === id); if (!u) return;
-  Swal.fire({ title: 'حذف', text: `هل تريد حذف "${u.name}" وكل ملاحظاته؟`, icon: 'warning', showCancelButton: true, confirmButtonText: 'نعم، احذف', cancelButtonText: 'إلغاء', confirmButtonColor: '#ef4444' }).then(r => {
-    if (r.isConfirmed) {
-      MaintenanceRepository.deleteLogBookUnit(b.id, id).then(() => {
-        logMaintDraft('delete', `تم حذف شقة/وحدة "${u.name}" من "${b.name}"`, u, null);
-        showToast('تم الحذف', 'success'); renderMaintLog();
-      });
-    }
-  });
-}
-function addMlogNote() {
-  if (!mlogCanEdit()) { showToast('هذا الإجراء متاح للمدير أو المشرف فقط', 'error'); return; }
-  const b = appData.maintenance.logBook.find(x => x.id === maintLogCurrentBuildingId); if (!b) return;
-  const u = b.units.find(x => x.id === maintLogCurrentUnitId); if (!u) return;
-  const catOptions = MLOG_CATEGORIES.map(c => `<option value="${c.key}">${c.key}</option>`).join('') + '<option value="ملاحظة عامة">ملاحظة عامة</option>';
-  Swal.fire({
-    title: 'إضافة ملاحظة',
-    html: `<div style="text-align:right;direction:rtl;">
-      <div style="margin-bottom:10px;"><label style="font-size:12px;display:block;margin-bottom:4px;">التصنيف</label>
-        <select class="swal2-select" id="mln-cat" style="direction:rtl;width:100%;">${catOptions}</select></div>
-      <div style="margin-bottom:10px;"><label style="font-size:12px;display:block;margin-bottom:4px;">نص الملاحظة</label>
-        <textarea class="swal2-textarea" id="mln-text" style="direction:rtl;" placeholder="تفاصيل الملاحظة..."></textarea></div>
-    </div>`,
-    showCancelButton: true, confirmButtonText: 'حفظ', cancelButtonText: 'إلغاء', confirmButtonColor: '#0d2137',
-    preConfirm: () => {
-      const text = document.getElementById('mln-text').value.trim();
-      if (!text) { Swal.showValidationMessage('يرجى كتابة نص الملاحظة'); return false; }
-      return { category: document.getElementById('mln-cat').value, text };
-    }
-  }).then(r => {
-    if (r.isConfirmed) {
-      const note = { id: uid(), text: r.value.text, category: r.value.category, user: currentUser ? currentUser.name : 'غير معروف', createdAt: new Date().toISOString() };
-      MaintenanceRepository.addLogBookNote(b.id, u.id, note).then(() => {
-        logMaintDraft('add', `تمت إضافة ملاحظة (${note.category}) في "${b.name} / ${u.name}"`, null, note);
-        showToast('تمت إضافة الملاحظة', 'success'); renderMaintLog();
-      });
-    }
-  });
-}
-function deleteMlogNote(id) {
-  if (!mlogCanEdit()) { showToast('هذا الإجراء متاح للمدير أو المشرف فقط', 'error'); return; }
-  const b = appData.maintenance.logBook.find(x => x.id === maintLogCurrentBuildingId); if (!b) return;
-  const u = b.units.find(x => x.id === maintLogCurrentUnitId); if (!u) return;
-  const n = u.notes.find(x => x.id === id); if (!n) return;
-  Swal.fire({ title: 'حذف الملاحظة', text: 'هل تريد حذف هذه الملاحظة؟', icon: 'warning', showCancelButton: true, confirmButtonText: 'نعم، احذف', cancelButtonText: 'إلغاء', confirmButtonColor: '#ef4444' }).then(r => {
-    if (r.isConfirmed) {
-      MaintenanceRepository.deleteLogBookNote(b.id, u.id, id).then(() => {
-        logMaintDraft('delete', `تم حذف ملاحظة (${n.category}) من "${b.name} / ${u.name}"`, n, null);
-        showToast('تم الحذف', 'success'); renderMaintLog();
+      const job = { id: uid(), text: r.value.text, user: currentUser ? currentUser.name : 'غير معروف', createdAt: new Date().toISOString() };
+      MaintenanceRepository.addMaintJob(job).then(() => {
+        logMaintDraft('add', `تمت إضافة وظيفة في سجل الصيانة: ${job.text}`, null, job);
+        showToast('تمت إضافة الوظيفة', 'success'); renderMaintLog();
       });
     }
   });

@@ -3911,6 +3911,7 @@ function renderVacantList(status) {
 }
 function reserveVacUnit(id, fromStatus) {
   const u = appData.vacant.units.find(x=>x.id===id); if (!u) return;
+  if (!window.confirm('أقر بأني استلمت رسوم كتابة العقد والسعي، وأتحمل أي مسؤولية مخالفة للنظام.')) return;
   const before = JSON.parse(JSON.stringify(u));
   const changes = { status: 'reserved', reserveDate: new Date().toISOString().slice(0,10), updatedAt: new Date().toISOString() };
   Object.assign(u, changes);

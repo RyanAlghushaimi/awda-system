@@ -3911,7 +3911,25 @@ function renderVacantList(status) {
 }
 function reserveVacUnit(id, fromStatus) {
   const u = appData.vacant.units.find(x=>x.id===id); if (!u) return;
-  if (!window.confirm('أقر بأني استلمت رسوم كتابة العقد والسعي، وأتحمل أي مسؤولية مخالفة للنظام.')) return;
+  Swal.fire({
+    title: '<i class="fas fa-lock" style="color:#c0392b;"></i> تأكيد الحجز',
+    width: 460,
+    html: `<div style="text-align:right;direction:rtl;font-size:14px;line-height:1.9;color:#1a1a1a;background:#fff6f6;border:1px solid #f3c6c6;border-radius:10px;padding:14px 16px;">
+             أقر بأني استلمت رسوم كتابة العقد والسعي، وأتحمل أي مسؤولية مخالفة للنظام.
+           </div>`,
+    showCancelButton: true,
+    confirmButtonText: '<i class="fas fa-check"></i> تأكيد الحجز',
+    cancelButtonText: 'إلغاء',
+    confirmButtonColor: '#c0392b',
+    cancelButtonColor: '#5a5a5a',
+    reverseButtons: true
+  }).then(result => {
+    if (!result.isConfirmed) return;
+    doReserveVacUnit(id, fromStatus);
+  });
+}
+function doReserveVacUnit(id, fromStatus) {
+  const u = appData.vacant.units.find(x=>x.id===id); if (!u) return;
   const before = JSON.parse(JSON.stringify(u));
   const changes = { status: 'reserved', reserveDate: new Date().toISOString().slice(0,10), updatedAt: new Date().toISOString() };
   Object.assign(u, changes);

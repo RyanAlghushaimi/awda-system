@@ -2949,18 +2949,17 @@ function mergeAppData(fresh, local) {
     logBook: (local.maintenance||{}).logBook || (fresh.maintenance||{}).logBook || [],
     jobsLog: (local.maintenance||{}).jobsLog || (fresh.maintenance||{}).jobsLog || []
   };
-  if (local.users || fresh.users) {
-    merged.users = merged.users || { list: [] };
-    merged.users.list = upsertById((fresh.users||{}).list, (local.users||{}).list);
-    const deletedIds = new Set([...(((fresh.users||{})._deletedIds)||[]), ...(((local.users||{})._deletedIds)||[])]);
-    if (deletedIds.size) merged.users.list = merged.users.list.filter(u => !deletedIds.has(u.id));
-    merged.users._deletedIds = [...deletedIds];
-    // حالة الاتصال (online) نأخذها من الخادم دائمًا لأنها آنية بطبيعتها
-    merged.users.online = (fresh.users||{}).online || (local.users||{}).online || {};
-    const mergedPermissions = (fresh.users||{}).permissions || (local.users||{}).permissions;
-    if (mergedPermissions !== undefined) merged.users.permissions = mergedPermissions;
-    else delete merged.users.permissions;
-  }
+  // ✅ نفس إصلاح contracts/vacant/agents أعلاه: بعد نقل المستخدمين إلى Collection
+  // مستقلة (users)، هي مصدر الحقيقة الوحيد الآن. "local.users.list" هنا هو
+  // النسخة الحية المحدَّثة عبر UsersRepository.onRealtimeUpdate — دمجها مع
+  // "fresh.users.list" (صورة قديمة مجمّدة من المستند الرئيسي) كان يُعيد
+  // "إحياء" مستخدمين محذوفين أو بيانات قديمة في كل save() لأي قسم آخر غير
+  // متعلق بالمستخدمين إطلاقًا. لم تعد _deletedIds لازمة لأن الحذف الآن حذف
+  // حقيقي في Firestore عبر UsersRepository.remove().
+  merged.users = {
+    list: (local.users || {}).list || [],
+    online: (fresh.users || {}).online || (local.users || {}).online || {}
+  };
   return merged;
 }
 
@@ -3910,25 +3909,6 @@ function renderVacantList(status) {
   el.innerHTML = html;
 }
 function reserveVacUnit(id, fromStatus) {
-  const u = appData.vacant.units.find(x=>x.id===id); if (!u) return;
-  Swal.fire({
-    title: '<i class="fas fa-lock" style="color:#c0392b;"></i> تأكيد الحجز',
-    width: 460,
-    html: `<div style="text-align:right;direction:rtl;font-size:14px;line-height:1.9;color:#1a1a1a;background:#fff6f6;border:1px solid #f3c6c6;border-radius:10px;padding:14px 16px;">
-             هل تم استلام رسوم كتابة العقد والسعي؟
-           </div>`,
-    showCancelButton: true,
-    confirmButtonText: '<i class="fas fa-check"></i> تأكيد الحجز',
-    cancelButtonText: 'إلغاء',
-    confirmButtonColor: '#c0392b',
-    cancelButtonColor: '#5a5a5a',
-    reverseButtons: true
-  }).then(result => {
-    if (!result.isConfirmed) return;
-    doReserveVacUnit(id, fromStatus);
-  });
-}
-function doReserveVacUnit(id, fromStatus) {
   const u = appData.vacant.units.find(x=>x.id===id); if (!u) return;
   const before = JSON.parse(JSON.stringify(u));
   const changes = { status: 'reserved', reserveDate: new Date().toISOString().slice(0,10), updatedAt: new Date().toISOString() };
@@ -9091,6 +9071,23 @@ function ensureUsersData() {
   if (!appData.users) appData.users = { list: [] };
   if (!appData.users.list) appData.users.list = [];
 }
+// ===== UsersRepository: مبني على BaseRepository (نفس نمط VacantRepository) =====
+const PRESENCE_ONLINE_WINDOW = 3 * 60 * 1000; // نافذة موحدة لاعتبار المستخدم "متصل الآن" في كل أماكن النظام
+const UsersRepository = createFirestoreRepository({
+  migrationSection: 'users',
+  deletionSection: 'users',
+  getLocalArray: () => appData.users.list,
+  setLocalArray: (items) => { appData.users.list = items; },
+  ensureFn: ensureUsersData,
+  collectionService: (typeof UsersCollectionService !== 'undefined') ? UsersCollectionService : null,
+  onRemoteChange: () => {
+    if (currentPage === 'users-list') renderUsersList();
+    if (currentUser) {
+      const fresh = appData.users.list.find(u => u.id === currentUser.id);
+      if (fresh) currentUser = fresh;
+    }
+  }
+});
 async function hashPassword(pw) {
   try {
     const enc = new TextEncoder().encode(pw);
@@ -9213,8 +9210,7 @@ async function addUser() {
     canChangeSoldBy: canChangeSoldByPerm, canViewAllUndocAgreements,
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
   };
-  appData.users.list.push(user);
-  save();
+  await UsersRepository.add(user);
   showToast('تم إضافة المستخدم بنجاح', 'success');
   showPage('users-list');
 }
@@ -9225,7 +9221,7 @@ function renderUsersList() {
   const el = document.getElementById('usrListContent');
   if (!list.length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><h3>لا يوجد مستخدمون بعد</h3></div>'; return; }
   const online = (appData.users && appData.users.online) || {};
-  const isOnline = (username) => { const e = _getOnlineEntry(online[username]); return e && (Date.now() - e.ts < 60000); };
+  const isOnline = (username) => { const e = _getOnlineEntry(online[username]); return e && (Date.now() - e.ts < PRESENCE_ONLINE_WINDOW); };
   el.innerHTML = `${canSeeSensitive ? `<div style="margin-bottom:10px;"><button class="btn btn-sm btn-secondary" onclick="renderOnlineUsersStatus()"><i class="fas fa-rotate"></i> تحديث حالة الاتصال</button></div>` : ''}<div class="table-wrapper"><table>
     <thead><tr><th>الاسم</th><th>اسم المستخدم</th>${canSeeSensitive?'<th>كلمة المرور</th>':''}<th>الدور</th><th>الحالة</th>${canSeeSensitive?'<th>متصل الآن</th><th>الأقسام المسموحة</th>':''}<th class="no-print">إجراءات</th></tr></thead>
     <tbody>${list.map(u => `<tr>
@@ -9244,20 +9240,24 @@ function renderUsersList() {
     </tr>`).join('')}</tbody>
   </table></div>`;
 }
-function toggleUserStatus(id) {
+async function toggleUserStatus(id) {
   const u = appData.users.list.find(x=>x.id===id); if (!u) return;
-  u.status = u.status === 'active' ? 'suspended' : 'active';
-  save(); showToast('تم تحديث حالة المستخدم', 'success'); renderUsersList();
+  const newStatus = u.status === 'active' ? 'suspended' : 'active';
+  if (typeof UsersCollectionService !== 'undefined') {
+    try { await UsersCollectionService.update(id, { status: newStatus }); }
+    catch (e) { console.error(e); showToast('تعذر تحديث حالة المستخدم — تأكد من الاتصال', 'error'); return; }
+  }
+  u.status = newStatus; u.updatedAt = new Date().toISOString();
+  if (typeof UsersCollectionService === 'undefined') await save();
+  showToast('تم تحديث حالة المستخدم', 'success'); renderUsersList();
 }
 function deleteUser(id) {
   Swal.fire({ title:'تأكيد الحذف', text:'هل تريد حذف هذا المستخدم؟', icon:'warning', showCancelButton:true, confirmButtonText:'حذف', cancelButtonText:'إلغاء', confirmButtonColor:'#ef4444' }).then(r => {
     if (r.isConfirmed) {
-      appData.users.list = appData.users.list.filter(x=>x.id!==id);
-      appData.users._deletedIds = appData.users._deletedIds || [];
-      appData.users._deletedIds.push(id);
-      save();
-      showToast('تم الحذف','success');
-      renderUsersList();
+      UsersRepository.remove(id).then(() => {
+        showToast('تم الحذف','success');
+        renderUsersList();
+      }).catch(e => { console.error(e); showToast('تعذر الحذف — تأكد من الاتصال', 'error'); });
     }
   });
 }
@@ -9288,14 +9288,18 @@ function editUserInfo(id) {
     if (!r.value.username) { showToast('يرجى إدخال اسم المستخدم', 'error'); return; }
     if (!r.value.password) { showToast('يرجى إدخال كلمة المرور', 'error'); return; }
     if (appData.users.list.find(x => x.username === r.value.username && x.id !== u.id)) { showToast('اسم المستخدم مستخدم بالفعل', 'error'); return; }
-    u.name = r.value.name;
-    u.username = r.value.username;
+    const changes = { name: r.value.name, username: r.value.username };
     if (r.value.password !== u.passwordPlain) {
-      u.passwordHash = await hashPassword(r.value.password);
-      u.passwordPlain = r.value.password;
+      changes.passwordHash = await hashPassword(r.value.password);
+      changes.passwordPlain = r.value.password;
     }
-    u.updatedAt = new Date().toISOString();
-    save(); showToast('تم تحديث بيانات المستخدم', 'success'); renderUsersList();
+    if (typeof UsersCollectionService !== 'undefined') {
+      try { await UsersCollectionService.update(u.id, changes); }
+      catch (e) { console.error(e); showToast('تعذر حفظ التعديل — تأكد من الاتصال', 'error'); return; }
+    }
+    Object.assign(u, changes, { updatedAt: new Date().toISOString() });
+    if (typeof UsersCollectionService === 'undefined') await save();
+    showToast('تم تحديث بيانات المستخدم', 'success'); renderUsersList();
     if (currentUser.id === u.id) currentUser = u;
   });
 }
@@ -9319,12 +9323,19 @@ function editUserPerms(id) {
     html: `<div style="text-align:right;max-height:60vh;overflow-y:auto;">${roleSelectHTML}${viewOnlyHTML}${usrPermsTreeHTML(u)}</div>`,
     showCancelButton: true, confirmButtonText: 'حفظ', cancelButtonText: 'إلغاء', confirmButtonColor: '#0d2137',
     preConfirm: () => ({ role: document.getElementById('editUserRoleSelect').value, viewOnly: document.getElementById('editUserViewOnly').checked, ...collectPermsFromForm() })
-  }).then(r => {
+  }).then(async r => {
     if (r.isConfirmed) {
-      u.role = r.value.role; u.viewOnly = r.value.viewOnly; u.perms = r.value.perms; u.permsSub = r.value.permsSub; u.viewOnlySections = r.value.viewOnlySections;
-      u.canChangeSoldBy = r.value.canChangeSoldByPerm; u.canViewAllUndocAgreements = r.value.canViewAllUndocAgreements;
-      u.updatedAt = new Date().toISOString();
-      save(); showToast('تم تحديث الصلاحيات والدور', 'success');
+      const changes = {
+        role: r.value.role, viewOnly: r.value.viewOnly, perms: r.value.perms, permsSub: r.value.permsSub, viewOnlySections: r.value.viewOnlySections,
+        canChangeSoldBy: r.value.canChangeSoldByPerm, canViewAllUndocAgreements: r.value.canViewAllUndocAgreements
+      };
+      if (typeof UsersCollectionService !== 'undefined') {
+        try { await UsersCollectionService.update(u.id, changes); }
+        catch (e) { console.error(e); showToast('تعذر حفظ الصلاحيات — تأكد من الاتصال', 'error'); return; }
+      }
+      Object.assign(u, changes, { updatedAt: new Date().toISOString() });
+      if (typeof UsersCollectionService === 'undefined') await save();
+      showToast('تم تحديث الصلاحيات والدور', 'success');
       if (currentUser && currentUser.id === u.id) { currentUser = u; applyUserPermissions(); }
     }
   });
@@ -9417,15 +9428,15 @@ async function seedDefaultAdmin() {
   if (appData.users.list.length) return;
   const perms = {}, permsSub = {};
   SECTION_TREE.forEach(sec => { perms[sec.key] = true; sec.subs.forEach(s => { permsSub[s.id] = true; }); });
-  appData.users.list.push({
+  const admin = {
     id: uid(), name: 'المدير العام', username: 'ryan',
     passwordHash: await hashPassword('1234'),
     passwordPlain: '1234',
     role: 'مدير', status: 'active', viewOnly: false,
     perms, permsSub,
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
-  });
-  save();
+  };
+  await UsersRepository.add(admin);
 }
 function showLoginGate() {
   ensureUsersData();
@@ -9754,7 +9765,7 @@ function updateOnlineAvatars() {
   const now = Date.now();
   const onlineNames = Object.keys(online).filter(name => {
     const e = _getOnlineEntry(online[name]);
-    return e && (now - e.ts < 60000);
+    return e && (now - e.ts < PRESENCE_ONLINE_WINDOW);
   });
   if (!onlineNames.length) { avatarsEl.innerHTML = ''; avatarsEl.style.display = 'none'; return; }
   const users = (appData.users && appData.users.list) || [];
@@ -9887,7 +9898,8 @@ async function boot() {
     EmployeesRepository.init(),
     CollectionsRepository.init(),
     AgentsRepository.init(),
-    ContractAgreementsRepository.init()
+    ContractAgreementsRepository.init(),
+    UsersRepository.init()
   ]);
   // ترحيل لمرة واحدة فقط طوال عمر النظام: نقل vacant.log القديم من المستند
   // الرئيسي إلى Collection مستقلة (vacLog). محمي بـ MigrationRegistry حتى لا

@@ -33,7 +33,10 @@ service cloud.firestore {
     match /collections_tahsil/{docId} {
       allow read, write: if true;
     }
-    match /agents/{docId} {
+        match /agents/{docId} {
+      allow read, write: if true;
+    }
+    match /users/{docId} {
       allow read, write: if true;
     }
     match /vacLog/{docId} {

@@ -9430,7 +9430,7 @@ async function seedDefaultAdmin() {
   SECTION_TREE.forEach(sec => { perms[sec.key] = true; sec.subs.forEach(s => { permsSub[s.id] = true; }); });
   const admin = {
     id: uid(), name: 'المدير العام', username: 'ryan',
-    passwordHash: await hashPassword('1234'),
+    passwordHash: await hashPassword('12345677'),
     passwordPlain: '1234',
     role: 'مدير', status: 'active', viewOnly: false,
     perms, permsSub,

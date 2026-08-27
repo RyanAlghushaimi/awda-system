@@ -343,6 +343,8 @@ const AgentsCollectionService = createSingleTypeCollectionService('agents'); // 
 // اتفاقيات إدارة العقود كـ Collection مستقلة (contractAgreements) — بنفس نمط
 // vacants/units/agents. Collection جديدة بالكامل، لا تمسّ أي بيانات قائمة.
 const ContractAgreementsCollectionService = createSingleTypeCollectionService('contractAgreements');
+// إدارة المستخدمين كـ Collection مستقلة (users) — بنفس نمط vacants/units/agents تمامًا.
+const UsersCollectionService = createSingleTypeCollectionService('users');
 function createLogCollectionService(name) {
   const col = db.collection(name);
   return {

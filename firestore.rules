@@ -68,6 +68,10 @@ match /maintenanceLog/{docId} {
       allow read, write: if true;
     }
 
+  match /contracts/{docId} {
+    allow read, write: if true;
+  }
+
     match /presence/{docId} {
       allow read, write: if true;
     }

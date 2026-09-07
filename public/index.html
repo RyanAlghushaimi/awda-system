@@ -4786,9 +4786,18 @@ async function saveContracts() {
   });
   if (!valid) { showToast('يرجى تعبئة جميع الحقول المطلوبة', 'error'); return; }
 
-  const otherYears = (agent.months[monthKey].contracts || []).filter(c => String(c.year || CURRENT_YEAR) !== String(year));
-  const previousThisYear = (agent.months[monthKey].contracts || []).filter(c => String(c.year || CURRENT_YEAR) === String(year));
-  agent.months[monthKey].contracts = otherYears.concat(contracts);
+  if (!agent.months[monthKey]) {
+  agent.months[monthKey] = { contracts: [] };
+}
+
+const otherYears = (agent.months[monthKey].contracts || [])
+  .filter(c => String(c.year || CURRENT_YEAR) !== String(year));
+
+const previousThisYear = (agent.months[monthKey].contracts || [])
+  .filter(c => String(c.year || CURRENT_YEAR) === String(year));
+
+agent.months[monthKey].contracts = otherYears.concat(contracts);
+
 
   if (!AgentsRepository._usingCollection) {
     // المسار القديم فقط — راجع الأولوية 3 للتأكد من تفعيل _usingCollection

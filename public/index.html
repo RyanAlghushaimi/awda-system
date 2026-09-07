@@ -4954,7 +4954,7 @@ function editContract(agentId, monthKey, contractId) {
       const changes = { unitName: r.value.unit, tenantName: r.value.tenant, contractDate: r.value.date,
         rentAmount: r.value.rent, commissionAmount: r.value.comm, notes: r.value.notes, year: r.value.year,
         updatedAt: new Date().toISOString() };
-            Object.assign(c, changes);
+      Object.assign(c, changes);
       if (__contractEditInProgress.has(contractId)) { return; }
       __contractEditInProgress.add(contractId);
       (async () => {

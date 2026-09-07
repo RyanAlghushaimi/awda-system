@@ -339,7 +339,90 @@ const VacantsCollectionService = createSingleTypeCollectionService('vacants');
 const UnitsCollectionService = createSingleTypeCollectionService('units');
 const EmployeesCollectionService = createSingleTypeCollectionService('employees');
 const CollectionsCollectionService = createSingleTypeCollectionService('collections_tahsil'); // تحصيل — اسم مميز لتفادي التباس مع مصطلح "collection" في Firestore نفسه
-const AgentsCollectionService = createSingleTypeCollectionService('agents'); // المسوّق وعقوده المتداخلة (months.contracts) يبقيان في نفس المستند
+const AgentsCollectionService = createSingleTypeCollectionService('agents'); // بيانات المسوّق نفسه فقط (الاسم وغيره) — العقود انتقلت إلى subcollection مستقلة، راجع AgentContractsService أدناه
+
+// ============================================================
+// ===== AgentContractsService: عقود المسوّق كمستندات مستقلة =====
+// agents/{agentId}/contracts/{contractId}
+// ============================================================
+// الهدف: تحديث/إضافة/حذف عقد واحد يؤثر فقط على مستند العقد نفسه، بدون أي
+// قراءة أو إعادة كتابة لمستند المسوّق بالكامل، وبدون runTransaction — بنفس
+// نمط contractAgreements المستقر (ref.update() مباشر بلا قراءة مسبقة).
+function agentContractsCol(agentId) {
+  return db.collection('agents').doc(String(agentId)).collection('contracts');
+}
+const AgentContractsService = {
+  async getAll(agentId) {
+    const snap = await agentContractsCol(agentId).get();
+    const items = [];
+    snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+    return items;
+  },
+  // إضافة عقد جديد فقط — لا قراءة مسبقة، لا لمس لأي عقد آخر لنفس المسوّق.
+  async add(agentId, contract) {
+    const { id, ...rest } = contract;
+    const ref = id ? agentContractsCol(agentId).doc(String(id)) : agentContractsCol(agentId).doc();
+    const data = stripUndefined({ ...rest, createdAt: rest.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() });
+    await ref.set(data);
+    return { ...data, id: ref.id };
+  },
+  // تحديث حقول عقد موجود فقط — update() مباشر بلا قراءة وبلا Transaction،
+  // يمزج الحقول المرسلة فقط ويترك بقية حقول هذا العقد كما هي.
+  async update(agentId, contractId, changes) {
+    const ref = agentContractsCol(agentId).doc(String(contractId));
+    const merged = stripUndefined({ ...changes, updatedAt: new Date().toISOString() });
+    await ref.update(merged);
+    return { id: contractId, ...merged };
+  },
+  async remove(agentId, contractId) {
+    await agentContractsCol(agentId).doc(String(contractId)).delete();
+  },
+  onRealtimeUpdate(agentId, callback) {
+    return agentContractsCol(agentId).onSnapshot((snap) => {
+      const items = [];
+      snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+      callback(items);
+    }, (err) => console.error(`خطأ في الاشتراك اللحظي بعقود المسوّق ${agentId}:`, err));
+  }
+};
+
+// ============================================================
+// ===== ترحيل عقود المسوّق (Lazy, Idempotent) =====
+// ============================================================
+// يُستدعى فقط عند فتح شاشة عقود مسوّق معيّن لأول مرة (وليس دفعة واحدة لكل
+// المسوقين). لا يحذف أي بيانات قديمة من مستند المسوّق إطلاقًا — تبقى
+// agent.months[mk].contracts كنسخة احتياطية مؤقتة. الترحيل لا يُعتبر ناجحًا
+// (ولا يُسجَّل في MigrationRegistry) إلا بعد التحقق الفعلي من اكتمال النسخ.
+async function migrateAgentContractsToSubcollection(agentId, agentMonthsData) {
+  const section = 'contracts_agent_' + agentId;
+  if (await MigrationRegistry.isMigrated(section)) return { migrated: false, count: 0 };
+
+  // إن كانت الـ subcollection تحتوي بيانات فعلًا (تم الترحيل سابقًا بطريقة ما
+  // لكن لم يُسجَّل)، لا نعيد الترحيل — فقط نسجّله.
+  const existing = await agentContractsCol(agentId).limit(1).get();
+  if (!existing.empty) { await MigrationRegistry.markMigrated(section); return { migrated: false, count: 0 }; }
+
+  const toWrite = [];
+  Object.entries(agentMonthsData || {}).forEach(([mk, m]) => {
+    ((m && m.contracts) || []).forEach(c => toWrite.push({ ...c, monthKey: mk }));
+  });
+  if (!toWrite.length) { await MigrationRegistry.markMigrated(section); return { migrated: true, count: 0 }; }
+
+  const batch = db.batch();
+  toWrite.forEach(c => {
+    const { id, ...rest } = c;
+    batch.set(agentContractsCol(agentId).doc(String(id)), stripUndefined(rest), { merge: true });
+  });
+  await batch.commit();
+
+  // تحقق فعلي من اكتمال النسخ قبل اعتبار الترحيل ناجحًا وتسجيله.
+  const verify = await agentContractsCol(agentId).get();
+  if (verify.size < toWrite.length) {
+    throw new Error('MIGRATION_INCOMPLETE: عقود المسوّق ' + agentId + ' — متوقَّع ' + toWrite.length + '، فعليًا ' + verify.size);
+  }
+  await MigrationRegistry.markMigrated(section);
+  return { migrated: true, count: toWrite.length };
+}
 // اتفاقيات إدارة العقود كـ Collection مستقلة (contractAgreements) — بنفس نمط
 // vacants/units/agents. Collection جديدة بالكامل، لا تمسّ أي بيانات قائمة.
 const ContractAgreementsCollectionService = createSingleTypeCollectionService('contractAgreements');

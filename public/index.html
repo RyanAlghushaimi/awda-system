@@ -1229,7 +1229,7 @@ body.view-only-mode .vac-status-btn {
               <button class="btn btn-outline btn-sm" onclick="addContractRow()"><i class="fas fa-plus"></i> إضافة عقد آخر</button>
             </div>
             <div id="saveContractBtnArea" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;">
-              <button class="btn btn-primary" onclick="saveContracts()"><i class="fas fa-save"></i> حفظ العقود</button>
+              <button id="btnSaveContracts" class="btn btn-primary" onclick="saveContracts()"><i class="fas fa-save"></i> حفظ العقود</button>
             </div>
           </div>
         </div>
@@ -4582,23 +4582,23 @@ const ContractsRepository = {
     appData.agents.forEach(a => Object.entries(a.months || {}).forEach(([mk, m]) => (m.contracts || []).forEach(c => all.push({ ...c, agentId: a.id, monthKey: mk }))));
     return all;
   },
+  // إضافة عقد واحد فقط: مستند جديد في agents/{agentId}/contracts — لا قراءة
+  // ولا كتابة لأي عقد آخر أو لمستند المسوّق نفسه.
   async add(agentId, monthKey, contract) {
     this.ensure();
     const agent = appData.agents.find(a => a.id === agentId);
     if (!agent) return null;
     if (!agent.months[monthKey]) agent.months[monthKey] = { contracts: [] };
-    agent.months[monthKey].contracts.push(contract);
+    const withMonth = { ...contract, monthKey };
+    agent.months[monthKey].contracts.push(withMonth);
     if (AgentsRepository._usingCollection) {
-      await AgentsCollectionService.updateWithFn(agentId, fresh => {
-        const months = { ...(fresh.months || {}) };
-        months[monthKey] = { ...(months[monthKey] || {}), contracts: [...((months[monthKey] || {}).contracts || []), contract] };
-        return { months };
-      });
+      await AgentContractsService.add(agentId, withMonth);
     } else {
       await save();
     }
-    return contract;
+    return withMonth;
   },
+  // حذف عقد واحد فقط بمعرّفه — لا يلمس أي عقد آخر لنفس المسوّق.
   async remove(contractId) {
     this.ensure();
     markDeleted('contracts', contractId, 'manual'); // طبقة أمان مؤقتة إضافية
@@ -4614,20 +4614,41 @@ const ContractsRepository = {
       });
     });
     if (AgentsRepository._usingCollection && owningAgentId) {
-      await AgentsCollectionService.updateWithFn(owningAgentId, fresh => {
-        const months = { ...(fresh.months || {}) };
-        Object.keys(months).forEach(mk => {
-          if (months[mk] && Array.isArray(months[mk].contracts)) {
-            months[mk] = { ...months[mk], contracts: months[mk].contracts.filter(c => c.id !== contractId) };
-          }
-        });
-        return { months };
-      });
+      await AgentContractsService.remove(owningAgentId, contractId);
     } else if (!AgentsRepository._usingCollection) {
       await save();
     }
   }
 };
+
+// ============================================================
+// ===== تحميل عقود المسوّق من subcollection عند فتح شاشته =====
+// ============================================================
+// يُشغّل الترحيل مرة واحدة فقط (idempotent) ثم يقرأ عقود هذا المسوّق من
+// الـ subcollection ليجعلها مصدر العرض المحلي appData.agents[].months —
+// بدون لمس النسخة الاحتياطية القديمة داخل مستند المسوّق نفسه.
+const __agentContractsLoaded = new Set();
+async function ensureAgentContractsLoaded(agentId) {
+  if (!agentId || !AgentsRepository._usingCollection || __agentContractsLoaded.has(agentId)) return;
+  const agent = appData.agents.find(a => a.id === agentId);
+  if (!agent) return;
+  try {
+    await migrateAgentContractsToSubcollection(agentId, agent.months || {});
+    const items = await AgentContractsService.getAll(agentId);
+    const months = {};
+    items.forEach(c => {
+      const mk = c.monthKey;
+      if (!mk) return;
+      if (!months[mk]) months[mk] = { contracts: [] };
+      months[mk].contracts.push(c);
+    });
+    agent.months = months;
+    __agentContractsLoaded.add(agentId);
+  } catch (e) {
+    console.error('[ensureAgentContractsLoaded] فشل تحميل عقود المسوّق:', agentId, e && e.message);
+    showToast('تعذر تحميل عقود المسوّق، الرجاء إعادة المحاولة', 'error');
+  }
+}
 function selectAgentForContract(id) {
   switchEntryTab('contract', document.querySelectorAll('.tab-btn')[1]);
   document.getElementById('contractAgentSelect').value = id;
@@ -4659,7 +4680,7 @@ function populateMonthSelect() {
     MONTHS.slice(0, limit + 1).map((m, i) => `<option value="${MONTH_KEYS[i]}">${m}</option>`).join('');
   if (cur) sel.value = cur;
 }
-function loadAgentMonths() {
+async function loadAgentMonths() {
   const agentId = document.getElementById('contractAgentSelect').value;
   const monthKey = document.getElementById('contractMonthSelect').value;
   const year = document.getElementById('contractYearSelect').value;
@@ -4672,6 +4693,8 @@ function loadAgentMonths() {
     saveBtn.style.display = 'none';
     return;
   }
+  container.innerHTML = '<div style="padding:12px;text-align:center;color:#888;">جارٍ التحميل...</div>';
+  await ensureAgentContractsLoaded(agentId);
   contractRowCount = 0;
   container.innerHTML = '';
   const agent = appData.agents.find(a => a.id === agentId);
@@ -4727,11 +4750,22 @@ function removeContractRow(id) {
   const row = document.getElementById(`contract-row-${id}`);
   if (row) row.remove();
 }
-function saveContracts() {
+// يمنع أكثر من عملية حفظ متزامنة لنفس المسوّق، ويمنع أي استدعاء مزدوج
+// لـ saveContracts() (نقرتان سريعتان على الزر) قبل انتهاء العملية الحالية.
+const __contractsSaveInProgress = new Set();
+
+const __contractsBulkSaveInProgress = new Set();
+async function saveContracts() {
   const agentId = document.getElementById('contractAgentSelect').value;
   const monthKey = document.getElementById('contractMonthSelect').value;
   const year = document.getElementById('contractYearSelect').value;
   if (!agentId || !monthKey || !year) { showToast('اختر المسوق والسنة والشهر', 'error'); return; }
+
+  if (__contractsBulkSaveInProgress.has(agentId)) {
+    showToast('عملية حفظ سابقة لنفس المسوّق ما زالت جارية، الرجاء الانتظار', 'warning');
+    return;
+  }
+
   const agent = appData.agents.find(a => a.id === agentId);
   if (!agent) return;
   const rows = document.querySelectorAll('[id^="contract-row-"]');
@@ -4748,22 +4782,69 @@ function saveContracts() {
     const existId = document.getElementById(`cr-id-${rowId}`)?.value || '';
     if (!unit || !tenant || !date) { valid = false; return; }
     if (rent < 0 || comm < 0) { valid = false; return; }
-    contracts.push({ id: existId || uid(), year, unitName: unit, tenantName: tenant, contractDate: date, rentAmount: rent, commissionAmount: comm, notes, createdAt: existId ? undefined : new Date().toISOString(), updatedAt: new Date().toISOString() });
+    contracts.push({ id: existId || uid(), monthKey, year, unitName: unit, tenantName: tenant, contractDate: date, rentAmount: rent, commissionAmount: comm, notes, createdAt: existId ? undefined : new Date().toISOString(), updatedAt: new Date().toISOString() });
   });
   if (!valid) { showToast('يرجى تعبئة جميع الحقول المطلوبة', 'error'); return; }
+
   const otherYears = (agent.months[monthKey].contracts || []).filter(c => String(c.year || CURRENT_YEAR) !== String(year));
+  const previousThisYear = (agent.months[monthKey].contracts || []).filter(c => String(c.year || CURRENT_YEAR) === String(year));
   agent.months[monthKey].contracts = otherYears.concat(contracts);
-  if (typeof AgentsRepository !== 'undefined' && AgentsRepository._usingCollection) {
-    AgentsCollectionService.updateWithFn(agentId, fresh => {
-      const months = { ...(fresh.months || {}) };
-      const freshOtherYears = ((months[monthKey] || {}).contracts || []).filter(c => String(c.year || CURRENT_YEAR) !== String(year));
-      months[monthKey] = { ...(months[monthKey] || {}), contracts: freshOtherYears.concat(contracts) };
-      return { months };
-    });
-  } else {
-    save();
+
+  if (!AgentsRepository._usingCollection) {
+    // المسار القديم فقط — راجع الأولوية 3 للتأكد من تفعيل _usingCollection
+    await save();
+    showToast(`تم حفظ ${contracts.length} عقد بنجاح`, 'success');
+    return;
   }
-  showToast(`تم حفظ ${contracts.length} عقد بنجاح`, 'success');
+
+  // ===== Diff: لا نُرسل إلا ما تغيّر فعليًا =====
+  const CONTRACT_FIELDS = ['unitName', 'tenantName', 'contractDate', 'rentAmount', 'commissionAmount', 'notes', 'year', 'monthKey'];
+  const prevById = new Map(previousThisYear.map(c => [c.id, c]));
+  const currentIds = new Set(contracts.map(c => c.id));
+
+  const toAdd = contracts.filter(c => !prevById.has(c.id));
+  const toUpdate = contracts.filter(c => {
+    const prev = prevById.get(c.id);
+    if (!prev) return false;
+    return CONTRACT_FIELDS.some(f => String(prev[f] ?? '') !== String(c[f] ?? ''));
+  });
+  const toRemove = previousThisYear.filter(c => !currentIds.has(c.id));
+
+  if (!toAdd.length && !toUpdate.length && !toRemove.length) {
+    showToast('لا توجد تغييرات لحفظها', 'success');
+    return;
+  }
+
+  __contractsBulkSaveInProgress.add(agentId);
+  const btn = document.getElementById('btnSaveContracts');
+  if (btn) btn.disabled = true;
+
+  try {
+    for (const c of toAdd) {
+      const { id, ...rest } = c;
+      await AgentContractsService.add(agentId, c);
+    }
+    for (const c of toUpdate) {
+      const { id, ...rest } = c;
+      await AgentContractsService.update(agentId, id, rest);
+    }
+    for (const c of toRemove) {
+      await AgentContractsService.remove(agentId, c.id);
+    }
+    showToast(`تم حفظ التغييرات (${toAdd.length} إضافة، ${toUpdate.length} تعديل، ${toRemove.length} حذف)`, 'success');
+  } catch (e) {
+    const code = e && e.code;
+    if (code === 'resource-exhausted' || (e && /429|quota/i.test(e.message || ''))) {
+      showToast('الخادم مشغول حاليًا، يرجى المحاولة بعد قليل', 'error');
+    } else {
+      showToast('تعذر حفظ بعض التغييرات، حاول مرة أخرى', 'error');
+    }
+    console.error('[saveContracts] فشل الحفظ:', code || '', e && e.message);
+    // لا Retry هنا عمدًا.
+  } finally {
+    __contractsBulkSaveInProgress.delete(agentId);
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ============================================================
@@ -4840,6 +4921,7 @@ function renderDataTable() {
     tbody.appendChild(tr);
   });
 }
+const __contractEditInProgress = new Set();
 function editContract(agentId, monthKey, contractId) {
   const agent = appData.agents.find(a => a.id === agentId);
   if (!agent) return;
@@ -4872,19 +4954,26 @@ function editContract(agentId, monthKey, contractId) {
       const changes = { unitName: r.value.unit, tenantName: r.value.tenant, contractDate: r.value.date,
         rentAmount: r.value.rent, commissionAmount: r.value.comm, notes: r.value.notes, year: r.value.year,
         updatedAt: new Date().toISOString() };
-      Object.assign(c, changes);
-      if (typeof AgentsRepository !== 'undefined' && AgentsRepository._usingCollection) {
-        AgentsCollectionService.updateWithFn(agentId, fresh => {
-          const months = { ...(fresh.months || {}) };
-          const contracts = (months[monthKey]?.contracts || []).map(x => x.id === contractId ? { ...x, ...changes } : x);
-          months[monthKey] = { ...(months[monthKey] || {}), contracts };
-          return { months };
-        });
-      } else {
-        save();
-      }
-      renderDataTable();
-      showToast('تم تعديل العقد', 'success');
+            Object.assign(c, changes);
+      if (__contractEditInProgress.has(contractId)) { return; }
+      __contractEditInProgress.add(contractId);
+      (async () => {
+        try {
+          if (typeof AgentsRepository !== 'undefined' && AgentsRepository._usingCollection) {
+            await AgentContractsService.update(agentId, contractId, changes);
+          } else {
+            await save();
+          }
+          renderDataTable();
+          showToast('تم تعديل العقد', 'success');
+        } catch (e) {
+          const code = e && e.code;
+          showToast(code === 'resource-exhausted' ? 'الخادم مشغول حاليًا، يرجى المحاولة بعد قليل' : 'تعذر حفظ التعديل', 'error');
+          console.error('[editContract] فشل الحفظ:', code || '', e && e.message);
+        } finally {
+          __contractEditInProgress.delete(contractId);
+        }
+      })();
     }
   });
 }

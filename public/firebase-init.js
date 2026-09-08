@@ -395,7 +395,8 @@ const AgentContractsService = {
   // ولا يحتاج تعديل قواعد الأمان — القاعدة الحالية على
   // /agents/{agentId}/contracts/{contractId} تغطي مسار collectionGroup نفسه.)
   onRealtimeUpdateAll(callback) {
-    return db.collectionGroup('contracts').onSnapshot((snap) => {
+    let fellBack = false;
+    const unsubGroup = db.collectionGroup('contracts').onSnapshot((snap) => {
       const items = [];
       snap.forEach(doc => {
         const agentId = doc.ref.parent && doc.ref.parent.parent ? doc.ref.parent.parent.id : null;
@@ -403,7 +404,55 @@ const AgentContractsService = {
         items.push({ id: doc.id, agentId, ...doc.data() });
       });
       callback(items, { fromCache: snap.metadata.fromCache });
-    }, (err) => console.error('خطأ في الاشتراك اللحظي بجميع عقود المسوّقين (collectionGroup):', err));
+    }, (err) => {
+      console.error('خطأ في الاشتراك اللحظي بجميع عقود المسوّقين (collectionGroup):', err);
+      // ============================================================
+      // خطة احتياطية: إذا رُفض استعلام collectionGroup (غالبًا بسبب
+      // قواعد أمان Firestore لا تسمح به بعد)، لا نترك الداشبورد بلا
+      // بيانات حية إلى أن يُشغَّل "تحديث بيانات جميع المسوّقين" يدويًا.
+      // بدلاً من ذلك نفتح اشتراك onSnapshot منفصل لكل مسوّق على حدة
+      // (نفس المسار المسموح به فعليًا في القواعد الحالية) وندمج نتائجها.
+      // هذا حل مؤقت فقط لحين تعديل قواعد Firestore لدعم collectionGroup —
+      // بعد التعديل سيعمل المسار الأصلي أعلاه من جديد بلا حاجة لأي تغيير.
+      // ============================================================
+      if (fellBack) return; // تجنّب فتح الخطة الاحتياطية أكثر من مرة عند أخطاء متكررة
+      fellBack = true;
+      console.warn('[AgentContractsService] التحويل إلى الخطة الاحتياطية: اشتراك منفصل لكل مسوّق بدل collectionGroup.');
+      this._fallbackToPerAgentListeners(callback);
+    });
+    return () => { if (typeof unsubGroup === 'function') unsubGroup(); this._stopFallbackListeners(); };
+  },
+  _fallbackUnsubscribers: [],
+  _fallbackItemsByAgent: {},
+  _stopFallbackListeners() {
+    this._fallbackUnsubscribers.forEach(u => { try { u(); } catch (e) {} });
+    this._fallbackUnsubscribers = [];
+    this._fallbackItemsByAgent = {};
+  },
+  async _fallbackToPerAgentListeners(callback) {
+    try {
+      const agents = await AgentsCollectionService.getAll();
+      this._stopFallbackListeners();
+      const emit = () => {
+        const merged = [];
+        Object.keys(this._fallbackItemsByAgent).forEach(agentId => {
+          this._fallbackItemsByAgent[agentId].forEach(item => merged.push(item));
+        });
+        callback(merged, { fromCache: false, viaFallback: true });
+      };
+      agents.forEach(agent => {
+        const agentId = String(agent.id);
+        const unsub = agentContractsCol(agentId).onSnapshot((snap) => {
+          const items = [];
+          snap.forEach(doc => items.push({ id: doc.id, agentId, ...doc.data() }));
+          this._fallbackItemsByAgent[agentId] = items;
+          emit();
+        }, (err) => console.error(`[fallback] خطأ في الاشتراك اللحظي بعقود المسوّق ${agentId}:`, err));
+        this._fallbackUnsubscribers.push(unsub);
+      });
+    } catch (e) {
+      console.error('[AgentContractsService] فشل تفعيل الخطة الاحتياطية:', e);
+    }
   }
 };
 

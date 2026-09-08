@@ -4786,18 +4786,9 @@ async function saveContracts() {
   });
   if (!valid) { showToast('يرجى تعبئة جميع الحقول المطلوبة', 'error'); return; }
 
-  if (!agent.months[monthKey]) {
-  agent.months[monthKey] = { contracts: [] };
-}
-
-const otherYears = (agent.months[monthKey].contracts || [])
-  .filter(c => String(c.year || CURRENT_YEAR) !== String(year));
-
-const previousThisYear = (agent.months[monthKey].contracts || [])
-  .filter(c => String(c.year || CURRENT_YEAR) === String(year));
-
-agent.months[monthKey].contracts = otherYears.concat(contracts);
-
+  const otherYears = (agent.months[monthKey].contracts || []).filter(c => String(c.year || CURRENT_YEAR) !== String(year));
+  const previousThisYear = (agent.months[monthKey].contracts || []).filter(c => String(c.year || CURRENT_YEAR) === String(year));
+  agent.months[monthKey].contracts = otherYears.concat(contracts);
 
   if (!AgentsRepository._usingCollection) {
     // المسار القديم فقط — راجع الأولوية 3 للتأكد من تفعيل _usingCollection
@@ -9674,6 +9665,7 @@ function startIdleWatcher() {
 // الاستعلام الدوري أدناه يبقى فقط كحل احتياطي تلقائي في حال لم تتوفر subscribe() بعد في firebase-init.js.
 let liveSyncTimer = null;
 let _liveUnsubscribe = null;
+let _agentContractsLiveUnsubscribe = null;
 const LIVE_SYNC_INTERVAL_ACTIVE = 4000;   // 4 ثوانٍ عند النشاط (وضع الاحتياط فقط)
 const LIVE_SYNC_INTERVAL_IDLE   = 20000;  // 20 ثانية عند عدم الرؤية أو لا يوجد مستخدمون آخرون (وضع الاحتياط فقط)
 let _liveSyncCurrentInterval = LIVE_SYNC_INTERVAL_ACTIVE;
@@ -9797,8 +9789,50 @@ function startLiveSync() {
       if (currentPage === 'contracts-draft') renderContractsDraft();
     });
   }
+  // استماع لحظي واحد على مستوى النظام بالكامل لعقود كل المسوّقين (collectionGroup)
+  // — يغذّي الداشبورد/التقارير بآخر تحديث فقط، دون أي حاجة لزيارة كل مسوّق يدويًا،
+  // ودون أي طلب متكرر عند تسجيل الدخول أو تحديث الصفحة (راجع startAgentContractsLiveSync).
+  startAgentContractsLiveSync();
   // إعادة الجدولة عند تغيّر رؤية الصفحة (وضع الاحتياط فقط)
   document.addEventListener('visibilitychange', _onVisibilityChange);
+}
+// ============================================================
+// ===== مزامنة لحظية موحّدة لعقود كل المسوّقين (Dashboard/التقارير) =====
+// ============================================================
+// بديل عن الاعتماد على agent.months (كانت تُحدَّث فقط عند فتح شاشة مسوّق
+// معيّن يدويًا). الآن: استعلام لحظي واحد يغطي عقود كل المسوّقين، فيُعاد بناء
+// agent.months محليًا من الحقيقة القادمة من Firestore في كل مرة يحدث فيها
+// تغيير فعلي فقط (إضافة/تعديل/حذف عقد واحد لأي مسوّق) — الداشبورد يبقى
+// ثابتًا تمامًا بين التحديثات، ولا يُعاد جلب أي بيانات إضافية عند كل
+// تسجيل دخول أو تحديث صفحة (يُقرأ أولًا من كاش Offline Persistence فورًا
+// إن وُجد، ثم يتزامن بهدوء دون أي كتلة قراءة كبيرة).
+function applyLiveAgentContractsSnapshot(items) {
+  const byAgent = {};
+  items.forEach(c => {
+    if (!c || !c.agentId || !c.monthKey) return;
+    if (!byAgent[c.agentId]) byAgent[c.agentId] = {};
+    if (!byAgent[c.agentId][c.monthKey]) byAgent[c.agentId][c.monthKey] = { contracts: [] };
+    byAgent[c.agentId][c.monthKey].contracts.push(c);
+  });
+  appData.agents.forEach(a => { a.months = byAgent[a.id] || {}; });
+  if (typeof __agentContractsLoaded !== 'undefined') __agentContractsLoaded.clear();
+  // إعادة رسم الشاشة المعروضة فعليًا حاليًا فقط (الداشبورد أو جدول البيانات
+  // أو التقرير الشامل) — لا داعي لإعادة رسم أي شاشة أخرى غير مفتوحة أمام
+  // المستخدم؛ ستقرأ تلقائيًا آخر بيانات عند فتحها لاحقًا لأن agent.months
+  // محدَّثة دائمًا في appData بغض النظر عن الشاشة المعروضة.
+  try {
+    if (currentPage === 'dashboard' && document.getElementById('dashStats')) renderDashboard();
+    else if (currentPage === 'data') renderDataTable();
+    else if (currentPage === 'report-all') renderReportAll();
+  } catch (e) { console.error('[applyLiveAgentContractsSnapshot] فشل تحديث الشاشة الحالية:', e); }
+}
+function startAgentContractsLiveSync() {
+  if (typeof AgentContractsService === 'undefined' || typeof AgentContractsService.onRealtimeUpdateAll !== 'function') return;
+  if (_agentContractsLiveUnsubscribe) return; // مُفعّل مسبقًا، لا داعي لفتح اشتراك ثانٍ
+  _agentContractsLiveUnsubscribe = AgentContractsService.onRealtimeUpdateAll(applyLiveAgentContractsSnapshot);
+}
+function stopAgentContractsLiveSync() {
+  if (_agentContractsLiveUnsubscribe) { try { _agentContractsLiveUnsubscribe(); } catch (e) {} _agentContractsLiveUnsubscribe = null; }
 }
 function _onVisibilityChange() {
   if (_liveUnsubscribe) return; // في وضع الاستماع اللحظي الفعلي لا حاجة لأي تدخل يدوي
@@ -9814,6 +9848,7 @@ function stopLiveSync() {
   if (_liveUnsubscribe) { try { _liveUnsubscribe(); } catch(e) {} _liveUnsubscribe = null; }
   if (_vacLogUnsubscribe) { try { _vacLogUnsubscribe(); } catch(e) {} _vacLogUnsubscribe = null; }
   if (_contractsLogUnsubscribe) { try { _contractsLogUnsubscribe(); } catch(e) {} _contractsLogUnsubscribe = null; }
+  stopAgentContractsLiveSync();
   document.removeEventListener('visibilitychange', _onVisibilityChange);
 }
 const LIVE_SYNC_EXCLUDED_PAGES = ['entry', 'vac-entry', 'units-entry', 'emp-entry', 'maint-new', 'users-entry', 'col-new-contract'];

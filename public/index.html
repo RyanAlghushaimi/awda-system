@@ -715,12 +715,24 @@ tfoot td { padding: 11px 14px; }
 .color-dot.selected { border-color: var(--gold); transform: scale(1.2); }
 /* ===== Print Styles ===== */
 @media print {
-  #sidebar, #topbar, .no-print { display: none !important; }
+  #sidebar, #topbar, .no-print, #sidebar-overlay { display: none !important; }
   #main { margin-right: 0 !important; }
   #content { padding: 0 !important; }
   .card, .chart-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+  /* يلغي overflow:hidden المضاف كـ inline style على body عند فتح القائمة الجانبية على الجوال،
+     والذي كان يقص الجزء السفلي من المطبوعات (يظهر فقط ما كان مرئياً على الشاشة). */
+  html, body, #app, #main, #content, .page.active {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
   body { background: white !important; color: black !important; }
   .print-header { display: block !important; }
+  /* تحسين تقسيم الصفحات: تجنّب قص الصفوف والبطاقات في منتصفها بين صفحة وأخرى */
+  table, tr, .card, .chart-card, .month-report, .report-agent-header {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
 }
 .print-header { display: none; }
 /* ===== Responsive ===== */
@@ -3282,6 +3294,11 @@ function toggleSidebar() {
 function autoHideSidebarForPage(page) {
   if (window.innerWidth < 900) closeMobileSidebar();
 }
+// يضمن عدم بقاء overflow:hidden على body (من فتح القائمة الجانبية على الجوال) عند الطباعة،
+// حتى لو تمت الطباعة عبر Ctrl+P أو زر المتصفح مباشرة وليس فقط عبر أزرار الطباعة في الصفحة.
+window.addEventListener('beforeprint', () => {
+  document.body.style.overflow = '';
+});
 function toggleMobileSidebar() {
   const sidebar = document.getElementById('sidebar');
   sidebar.classList.toggle('mobile-open');

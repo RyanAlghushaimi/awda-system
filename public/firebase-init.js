@@ -383,6 +383,27 @@ const AgentContractsService = {
       snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
       callback(items);
     }, (err) => console.error(`خطأ في الاشتراك اللحظي بعقود المسوّق ${agentId}:`, err));
+  },
+  // ============================================================
+  // اشتراك لحظي على مستوى النظام بالكامل عبر collectionGroup: يغطي عقود
+  // كل المسوّقين باستعلام واحد فقط، بدل فتح اشتراك onSnapshot منفصل لكل
+  // مسوّق (ما كان سيكلّف N اشتراك/قراءة لكل تحميل صفحة). يُستخدم لتغذية
+  // الداشبورد والتقارير المجمّعة بأحدث بيانات دون أي حاجة لزيارة كل
+  // مسوّق يدويًا فتح الترحيل، ودون أي تكلفة إضافية إن لم يتغيّر شيء —
+  // onSnapshot لا يرسل شيئًا إطلاقًا حتى يحدث تغيير فعلي في أي عقد.
+  // (تنبيه: هذا الاستعلام لا يحتاج فهرس (Index) مركّب لأنه بلا where/orderBy،
+  // ولا يحتاج تعديل قواعد الأمان — القاعدة الحالية على
+  // /agents/{agentId}/contracts/{contractId} تغطي مسار collectionGroup نفسه.)
+  onRealtimeUpdateAll(callback) {
+    return db.collectionGroup('contracts').onSnapshot((snap) => {
+      const items = [];
+      snap.forEach(doc => {
+        const agentId = doc.ref.parent && doc.ref.parent.parent ? doc.ref.parent.parent.id : null;
+        if (!agentId) return;
+        items.push({ id: doc.id, agentId, ...doc.data() });
+      });
+      callback(items, { fromCache: snap.metadata.fromCache });
+    }, (err) => console.error('خطأ في الاشتراك اللحظي بجميع عقود المسوّقين (collectionGroup):', err));
   }
 };
 

@@ -715,12 +715,17 @@ tfoot td { padding: 11px 14px; }
 .color-dot.selected { border-color: var(--gold); transform: scale(1.2); }
 /* ===== Print Styles ===== */
 @media print {
-  #sidebar, #topbar, .no-print { display: none !important; }
+  #sidebar, #topbar, .no-print, #sidebar-overlay { display: none !important; }
   #main { margin-right: 0 !important; }
   #content { padding: 0 !important; }
   .card, .chart-card { box-shadow: none !important; border: 1px solid #ccc !important; }
   body { background: white !important; color: black !important; }
   .print-header { display: block !important; }
+  html, body, #app, #main, #content, .page.active {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
   .report-agent-header, .month-report, .summary-box, .best-agent-card,
   .card, .chart-card, table, tr, thead, tfoot {
     page-break-inside: avoid !important;
@@ -10136,6 +10141,11 @@ window.addEventListener('popstate', function (e) {
   if (e.state && e.state.appPage) {
     showPage(e.state.appPage, true, true);
   }
+});
+// يصفّر overflow المطبّق يدوياً على body (عند فتح القائمة الجانبية على الجوال)
+// قبل بدء الطباعة مباشرة، حتى لا يقتصّ المتصفح المحتوى غير الظاهر على الشاشة.
+window.addEventListener('beforeprint', () => {
+  document.body.style.overflow = '';
 });
 // لا حاجة لأي معالجة يدوية هنا بعد الآن — الاشتراك اللحظي بـ Firestore
 // (onSnapshot عبر startLiveSync) يستأنف تلقائيًا فور عودة الاتصال أو ظهور التبويب.

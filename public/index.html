@@ -721,6 +721,14 @@ tfoot td { padding: 11px 14px; }
   .card, .chart-card { box-shadow: none !important; border: 1px solid #ccc !important; }
   body { background: white !important; color: black !important; }
   .print-header { display: block !important; }
+  .report-agent-header, .month-report, .summary-box, .best-agent-card,
+  .card, .chart-card, table, tr, thead, tfoot {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  table thead { display: table-header-group; }
+  table tfoot { display: table-footer-group; }
+  .month-report-header { page-break-after: avoid !important; break-after: avoid !important; }
 }
 .print-header { display: none; }
 /* ===== Responsive ===== */
@@ -8868,7 +8876,7 @@ function renderContractsUndocumented() {
   const canDelete = currentUser && (currentUser.role === 'مدير' || currentUser.role === 'مشرف');
     el.innerHTML = '<div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));">' + sortContractsByRecency(list).map(a => {
     const color = a.type === 'new' ? 'var(--danger)' : (a.type === 'transfer' ? 'var(--info)' : 'var(--warning)');
-    const typeLabel = a.type === 'new' ? 'تأجير جديد' : (a.type === 'transfer' ? 'تأجير للغير' : 'تعديل بيانات');
+    const typeLabel = a.type === 'new' ? 'تأجير جديد' : (a.type === 'transfer' ? 'تأجير للغير' : (a.type === 'renew' ? 'تجديد عقد' : 'تعديل بيانات'));
     return `<div class="card" style="border-right:5px solid ${color};margin-top:0;">
       <div style="font-weight:700;font-size:15px;">${contractDisplayName(a) || '—'}</div>
       <div style="font-size:12px;color:var(--text-muted);margin:4px 0 10px;">${typeLabel} — ${fmtDate(a.createdAt)}</div>
@@ -8895,7 +8903,7 @@ function renderContractsDocumented() {
   const canDelete = currentUser && (currentUser.role === 'مدير' || currentUser.role === 'مشرف');
     el.innerHTML = '<div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));">' + sortContractsByRecency(list).map(a => {
     const color = a.type === 'new' ? 'var(--danger)' : (a.type === 'transfer' ? 'var(--info)' : 'var(--warning)');
-    const typeLabel = a.type === 'new' ? 'تأجير جديد' : (a.type === 'transfer' ? 'تأجير للغير' : 'تعديل بيانات');
+    const typeLabel = a.type === 'new' ? 'تأجير جديد' : (a.type === 'transfer' ? 'تأجير للغير' : (a.type === 'renew' ? 'تجديد عقد' : 'تعديل بيانات'));
     return `<div class="card" style="border-right:5px solid ${color};margin-top:0;position:relative;overflow:hidden;">
       <div style="font-size:10px;color:var(--success);font-weight:700;background:rgba(34,197,94,0.1);padding:4px 8px;border-radius:6px;display:inline-block;margin-bottom:8px;"><i class="fas fa-stamp"></i> تم التوثيق إلكترونياً من قبل ${a.documentedBy || 'المدير'}</div>
       <div style="font-weight:700;font-size:15px;">${contractDisplayName(a) || '—'}</div>
@@ -8986,19 +8994,21 @@ function renderContractsDashboard() {
   const documented = list.filter(a => a.status === 'documented').length;
   const newCount = list.filter(a => a.type === 'new').length;
   const transferCount = list.filter(a => a.type === 'transfer').length;
-  const changeCount = list.filter(a => a.type !== 'new' && a.type !== 'transfer').length;
+  const renewCount = list.filter(a => a.type === 'renew').length;
+  const changeCount = list.filter(a => a.type === 'change').length;
   document.getElementById('contractsDashStats').innerHTML =
     statCardHTML('fa-file-contract', 'rgba(13,33,55,0.1)', 'var(--primary)', total, 'إجمالي الاتفاقيات') +
     statCardHTML('fa-hourglass-half', 'rgba(239,68,68,0.12)', 'var(--danger)', undocumented, 'غير موثقة') +
     statCardHTML('fa-stamp', 'rgba(34,197,94,0.12)', 'var(--success)', documented, 'موثقة') +
     statCardHTML('fa-file-signature', 'rgba(239,68,68,0.12)', 'var(--danger)', newCount, 'تأجير جديد') +
+    statCardHTML('fa-rotate', 'rgba(168,85,247,0.12)', '#a855f7', renewCount, 'تجديد عقد') +
     statCardHTML('fa-file-pen', 'rgba(245,158,11,0.12)', 'var(--warning)', changeCount, 'تعديل بيانات') +
     statCardHTML('fa-people-arrows', 'rgba(59,130,246,0.12)', 'var(--info)', transferCount, 'تأجير للغير');
   const el = document.getElementById('contractsDashRecent');
     const recent = sortContractsByRecency(list);
   el.innerHTML = '<div class="card-title"><i class="fas fa-list"></i> كل الاتفاقيات</div>' +
     (recent.length ? '<div class="table-wrapper" style="max-height:420px;overflow-y:auto;"><table><thead><tr><th>العميل</th><th>النوع</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>' +
-      recent.map(a => `<tr><td>${contractDisplayName(a) || '—'}</td><td>${a.type === 'new' ? 'تأجير جديد' : (a.type === 'transfer' ? 'تأجير للغير' : 'تعديل بيانات')}</td><td><span class="badge ${a.status === 'documented' ? 'badge-success' : 'badge-muted'}">${a.status === 'documented' ? 'موثقة' : 'غير موثقة'}</span></td><td>${fmtDate(a.createdAt)}</td></tr>`).join('') + '</tbody></table></div>'
+      recent.map(a => `<tr><td>${contractDisplayName(a) || '—'}</td><td>${a.type === 'new' ? 'تأجير جديد' : (a.type === 'transfer' ? 'تأجير للغير' : (a.type === 'renew' ? 'تجديد عقد' : 'تعديل بيانات'))}</td><td><span class="badge ${a.status === 'documented' ? 'badge-success' : 'badge-muted'}">${a.status === 'documented' ? 'موثقة' : 'غير موثقة'}</span></td><td>${fmtDate(a.createdAt)}</td></tr>`).join('') + '</tbody></table></div>'
       : '<div class="empty-state"><i class="fas fa-inbox"></i><h3>لا توجد بيانات</h3></div>');
 }
 

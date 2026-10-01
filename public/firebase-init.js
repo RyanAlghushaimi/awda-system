@@ -95,7 +95,8 @@ const MigrationRegistry = {
       return !!(snap.exists && snap.data() && snap.data()[section] === true);
     } catch (e) {
       console.error('تعذر قراءة سجل الترحيل:', e);
-      return false;
+      // لا نُرجع false عند الفشل: false تعني "لم يُرحَّل" فيُعاد ترحيل نسخة قديمة فوق البيانات الحديثة
+      throw e;
     }
   },
   async markMigrated(section) {
@@ -322,10 +323,14 @@ function createSingleTypeCollectionService(collectionName) {
     // ترحيل لمرة واحدة (يُستدعى فقط إذا كان MigrationRegistry يقول إن القسم
     // لم يُرحَّل بعد — وليس بناءً على كون الـ Collection فارغة).
     async migrateFromArray(items) {
+      const existingSnap = await col.get();
+      const existingIds = new Set();
+      existingSnap.forEach(d => existingIds.add(d.id));
       const batch = db.batch();
       let count = 0;
       (items || []).forEach(it => {
         const { id, ...rest } = it;
+        if (existingIds.has(String(id))) return; // لا نكتب فوق مستند موجود أبدًا
         batch.set(col.doc(String(id)), stripUndefined(rest), { merge: true });
         count++;
       });

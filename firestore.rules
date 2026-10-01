@@ -43,6 +43,9 @@ service cloud.firestore {
     match /users/{docId} {
       allow read, write: if true;
     }
+  match /vac/{docId} {
+  allow read, write: if true;
+}
     match /vacLog/{docId} {
   allow read, write: if true;
 }

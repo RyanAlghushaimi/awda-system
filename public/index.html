@@ -4024,7 +4024,7 @@ function editVacUnit(id) {
     didOpen: () => { vfBindMediaInput(u.media || [], 'vfe'); vacNoVatState['vfe'] = !!u.noVat; updateVacPriceVat('vfe'); },
     showCancelButton: true, confirmButtonText: 'حفظ', cancelButtonText: 'إلغاء', confirmButtonColor: '#0d2137',
     preConfirm: () => collectVacFieldValues('vfe')
-  }).then(r => {
+  }).then(async r => {
     if (r.isConfirmed) {
       const before = JSON.parse(JSON.stringify(u));
       Object.assign(u, r.value);
@@ -4035,8 +4035,17 @@ function editVacUnit(id) {
       syncVacLocationFromUnit(u);
       logVacDraft('تعديل وحدة', `${u.propertyName||''} — ${u.unitType||''} — طابق ${u.floor||'؟'} شقة ${u.aptNo||'؟'}`, before, u);
       const { id: _id, ...changesToSave } = JSON.parse(JSON.stringify(u));
-      VacantRepository.update(id, changesToSave).catch(e => { console.error(e); showToast('تعذر حفظ التعديل — تأكد من الاتصال', 'error'); });
-      showToast('تم التحديث', 'success');
+      try {
+        const saved = await Promise.race([
+          VacantRepository.update(id, changesToSave),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('لم يتأكد الحفظ على الخادم بعد (قد يكون الاتصال ضعيفًا). لا تغلق الصفحة، وتحقق من الاتصال ثم أعد فتح الوحدة للتأكد.')), 15000))
+        ]);
+        if (!saved) throw new Error('الوحدة غير موجودة في القائمة الحالية');
+        showToast('تم التحديث', 'success');
+      } catch (e) {
+        console.error(e);
+        Swal.fire({ icon: 'error', title: 'لم يُحفظ التعديل', text: String(e.message || e) });
+      }
       renderVacantList(u.status);
       // تحديث قوائم إدارة الوحدات إن كانت مفتوحة
       const umPropList = document.getElementById('umPropList');

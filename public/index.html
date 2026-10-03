@@ -7153,6 +7153,7 @@ function createFirestoreRepository({ migrationSection, deletionSection, getLocal
       } catch (e) {
         console.error(`تعذر الاتصال بـ ${migrationSection} Collection عند الإقلاع:`, e);
         this._usingCollection = false;
+        if (typeof showToast === 'function') showToast('تعذر تحميل بيانات ' + migrationSection + ' من الخادم — أعد تحميل الصفحة ولا تعدّل قبل ذلك', 'error');
         return;
       }
       if (this._unsub) this._unsub();
@@ -7188,6 +7189,7 @@ function createFirestoreRepository({ migrationSection, deletionSection, getLocal
       if (!item) return null;
       Object.assign(item, changes, { updatedAt: new Date().toISOString() });
       if (this._usingCollection) await collectionService.update(id, changes);
+      else if (collectionService) throw new Error('الاتصال بقاعدة بيانات ' + migrationSection + ' غير متاح — لم يُحفظ التعديل');
       else await save();
       return item;
     },

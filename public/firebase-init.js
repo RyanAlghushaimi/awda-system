@@ -745,7 +745,7 @@ const MaintenanceCollectionService = {
   // ترحيل لمرة واحدة: ينقل appData.maintenance.requests/schedules الحالية
   // (من المستند الكبير) إلى المستندات المستقلة في الـ Collection الجديدة.
   // آمن للتشغيل أكثر من مرة (Idempotent) لأنه يستخدم نفس الـ id كمعرف مستند.
-    async migrateFromMainDoc(maintenanceData) {
+  async migrateFromMainDoc(maintenanceData) {
     const existingSnap = await maintenanceCol.get();
     const existingIds = new Set();
     existingSnap.forEach(d => existingIds.add(d.id));

@@ -1,0 +1,101 @@
+/* ===== Agents Grid ===== */
+.agents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.agent-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  transition: all var(--transition);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.agent-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-light));
+}
+.agent-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+/* ===== سجل الصيانة: قائمة الوظائف (Maintenance Jobs Log) ===== */
+.mlog-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+.mlog-crumbs { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted); flex-wrap:wrap; }
+.mlog-add-btn {
+  display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:var(--radius-sm);
+  background:linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%); color:var(--white);
+  border:none; font-size:13.5px; font-weight:800; cursor:pointer; box-shadow:var(--shadow); transition:all var(--transition);
+}
+.mlog-add-btn:hover { transform:translateY(-2px); box-shadow:var(--shadow-lg); }
+.mlog-notes-list { display:flex; flex-direction:column; gap:12px; }
+.mlog-note-row {
+  display:flex; align-items:center; gap:14px; padding:15px 18px; border-radius:var(--radius-sm); box-shadow:var(--shadow);
+  transition:all var(--transition); color:var(--white); overflow:hidden; position:relative;
+}
+.mlog-note-row:hover { transform:translateY(-3px); box-shadow:var(--shadow-lg); }
+.mlog-note-icon {
+  width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+  font-size:17px; color:var(--white); flex-shrink:0; background:rgba(255,255,255,.22);
+}
+.mlog-note-body { flex:1; min-width:0; }
+.mlog-note-text { font-size:14.5px; color:var(--white); font-weight:700; line-height:1.6; word-break:break-word; }
+.mlog-note-tags { display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap; }
+.mlog-note-user { font-size:11.5px; color:rgba(255,255,255,.9); white-space:nowrap; }
+.mlog-note-time-block {
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; flex-shrink:0;
+  background:rgba(255,255,255,.18); border-radius:var(--radius-sm); padding:8px 14px; min-width:92px; text-align:center;
+}
+.mlog-note-time-block .mlog-day { font-size:12px; font-weight:800; color:var(--white); }
+.mlog-note-time-block .mlog-time { font-size:13px; font-weight:800; color:var(--white); }
+.mlog-note-time-block .mlog-date { font-size:10.5px; color:rgba(255,255,255,.85); }
+.mjob-swal-popup { border-radius:20px !important; }
+.online-avatar-circle {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: var(--gold); font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--success); cursor: default;
+  position: relative; flex-shrink: 0;
+}
+.agent-avatar {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: var(--gold);
+  margin-bottom: 12px;
+}
+.agent-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.agent-stats { display: flex; gap: 12px; margin-top: 12px; }
+.agent-stat { text-align: center; }
+.agent-stat-val { font-size: 17px; font-weight: 800; color: var(--gold); }
+.agent-stat-lbl { font-size: 10px; color: var(--text-muted); }
+/* ===== Month Tabs ===== */
+.months-tabs {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.month-tab {
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.month-tab.active { background: var(--gold); color: var(--primary); border-color: var(--gold); }
+.month-tab:hover:not(.active) { border-color: var(--gold); color: var(--gold); }
+/* ===== Contract Row ===== */
+.contract-form-row {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1.5fr 1.5fr 1.5fr 2fr auto;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 8px;
+  padding: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}

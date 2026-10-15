@@ -1,0 +1,119 @@
+/* ===== Contribution Bar ===== */
+.contrib-bar { height: 8px; background: var(--border); border-radius: 4px; margin-top: 6px; overflow: hidden; }
+.contrib-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--gold-dark), var(--gold-light)); transition: width 0.8s ease; }
+/* ===== Toast ===== */
+.toast-container {
+  position: fixed; bottom: 24px; left: 24px;
+  display: flex; flex-direction: column; gap: 8px;
+  z-index: 10000; pointer-events: none;
+}
+.toast {
+  background: var(--primary);
+  color: white;
+  padding: 12px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  box-shadow: var(--shadow-lg);
+  display: flex; align-items: center; gap: 10px;
+  border-right: 4px solid var(--gold);
+  animation: toastIn 0.3s ease;
+  max-width: 320px;
+  pointer-events: auto;
+}
+.toast.toast-success { border-color: var(--success); }
+.toast.toast-error { border-color: var(--danger); }
+.toast.toast-out { animation: toastOut 0.3s ease forwards; }
+@keyframes toastIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes toastOut { to { opacity: 0; transform: translateX(-20px); } }
+.vac-reserved-row { background: rgba(239,68,68,0.10) !important; }
+.vac-future-row { background: rgba(245,158,11,0.15) !important; }
+/* ===== عرض الجوال/التابلت بأسلوب بسيط (تمرير أفقي عادي، بدون تحويل لبطاقات) ===== */
+@media (max-width: 900px) {
+  #page-vac-available .table-wrapper, #page-vac-reserved .table-wrapper, #page-vac-rented .table-wrapper {
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  #page-vac-available table, #page-vac-reserved table, #page-vac-rented table { font-size: 12.5px; }
+  #page-vac-available .card, #page-vac-reserved .card, #page-vac-rented .card { padding: 14px; }
+  #page-vac-available .filter-bar, #page-vac-reserved .filter-bar, #page-vac-rented .filter-bar { flex-direction: column; align-items: stretch; }
+  #page-vac-available .filter-bar select, #page-vac-reserved .filter-bar select, #page-vac-rented .filter-bar select { width: 100%; }
+  #page-vac-available .btn-sm, #page-vac-reserved .btn-sm, #page-vac-rented .btn-sm { padding: 7px 9px; font-size: 12px; }
+}
+.btn-label { display: none; }
+@media (max-width: 900px) { .btn-label { display: inline; margin-right: 4px; } }
+/* ===== إخفاء كامل للقائمة الجانبية عند طلبه ===== */
+#sidebar.force-hidden { transform: translateX(100%) !important; }
+#main.sidebar-force-collapsed { margin-right: 0 !important; }
+/* ===== إصلاح عرض الجوال لصفحات إدارة الفوارغ الثانوية ===== */
+@media (max-width: 900px) {
+  #page-vac-available .card,
+  #page-vac-reserved .card,
+  #page-vac-rented .card { padding: 14px; }
+  #page-vac-available .table-wrapper table,
+  #page-vac-reserved .table-wrapper table,
+  #page-vac-rented .table-wrapper table { font-size: 12px; min-width: 640px; }
+  #page-vac-available td.no-print,
+  #page-vac-reserved td.no-print,
+  #page-vac-rented td.no-print { display: flex; flex-wrap: wrap; gap: 6px; min-width: 140px; }
+  #page-vac-available .btn-sm,
+  #page-vac-reserved .btn-sm,
+  #page-vac-rented .btn-sm { padding: 8px 10px; font-size: 13px; }
+  #page-vac-available .filter-bar,
+  #page-vac-reserved .filter-bar,
+  #page-vac-rented .filter-bar { flex-direction: column; align-items: stretch; }
+  #page-vac-available .filter-bar select,
+  #page-vac-reserved .filter-bar select,
+  #page-vac-rented .filter-bar select { width: 100%; }
+}
+/* ===== Motivational Side Notification ===== */
+#motivationPopup {
+  position: fixed; top: 90px; left: 24px; z-index: 10001;
+  max-width: 300px; background: linear-gradient(135deg, var(--sidebar-bg, #0d2137) 0%, #1a3a5c 100%);
+  color: #fff; padding: 16px 18px; border-radius: var(--radius-sm, 10px);
+  border-right: 4px solid var(--gold, #d4af37); box-shadow: var(--shadow-lg, 0 10px 30px rgba(0,0,0,0.3));
+  display: flex; align-items: flex-start; gap: 10px;
+  animation: motivIn 0.4s ease;
+}
+#motivationPopup.motiv-out { animation: motivOut 0.4s ease forwards; }
+#motivationPopup .motiv-icon { color: var(--gold, #d4af37); font-size: 18px; margin-top: 2px; }
+#motivationPopup .motiv-text { font-size: 13.5px; line-height: 1.7; font-weight: 600; }
+#motivationPopup .motiv-close { background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 14px; margin-right: auto; }
+@keyframes motivIn { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes motivOut { to { opacity: 0; transform: translateX(-30px); } }
+@media (max-width: 900px) { #motivationPopup { top: auto; bottom: 90px; left: 12px; right: 12px; max-width: none; } }
+/* ===== Units Management (إدارة الوحدات) ===== */
+.units-section-toggle {
+  cursor: pointer;
+  user-select: none;
+}
+.units-section-toggle:hover { background: var(--surface2); }
+.units-collapsible { overflow: hidden; transition: max-height 0.3s ease; }
+.vac-reserved-row td { color: var(--danger); font-weight: 600; }
+/* تلوين صفوف جدول الوحدات حسب حالة العقد (منتهي / قارب على الانتهاء) */
+.um-row-expired td { background: #fde2e2 !important; }
+.um-row-orange td { background: #ffe3c2 !important; }
+.um-row-yellow td { background: #fff6c2 !important; }
+.vac-media-thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; }
+#vacDraftText { width: 100%; min-height: 300px; resize: vertical; }
+/* ===== View-only mode (restricted users) ===== */
+body.view-only-mode .btn-gold,
+body.view-only-mode .btn-danger,
+body.view-only-mode .btn-primary,
+body.view-only-mode input[type="file"],
+body.view-only-mode .toggle {
+  pointer-events: none !important;
+  opacity: 0.45 !important;
+  filter: grayscale(60%);
+}
+body.view-only-mode .no-view-only { display: none !important; }
+body.view-only-mode .btn-edit-vac,
+body.view-only-mode .btn-delete-vac {
+  opacity: 0.45 !important;
+  filter: grayscale(60%);
+  cursor: not-allowed;
+}
+body.view-only-mode .vac-status-btn {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  filter: none !important;
+  cursor: pointer !important;
+}

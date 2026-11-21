@@ -28,80 +28,7 @@ function buildVacShareText(u) {
   });
   return text.trim();
 }
-async function vacUnitMediaToFiles(u, limit = 10) {
-  const media = (u.media || []).slice(0, limit);
-  const files = [];
-  for (let i = 0; i < media.length; i++) {
-    const m = media[i];
-    try {
-      const res = await fetch(m.data);
-      const blob = await res.blob();
-      const ext = (m.name && m.name.includes('.')) ? m.name.split('.').pop() : (m.type === 'video' ? 'mp4' : 'jpg');
-      const fileName = `${u.propertyName || 'وحدة'}-${i+1}.${ext}`;
-      files.push(new File([blob], fileName, { type: blob.type || (m.type === 'video' ? 'video/mp4' : 'image/jpeg') }));
-    } catch (e) { /* تجاهل الملف إن تعذّرت قراءته */ }
-  }
-  return files;
-}
-async function shareVacUnit(id) {
-  const u = appData.vacant.units.find(x=>x.id===id); if (!u) return;
-  Swal.fire({
-    title: 'مشاركة الوحدة',
-    input: 'text',
-    inputLabel: 'أدخل رقم الجوال المرسل إليه',
-    inputPlaceholder: 'مثال: 05xxxxxxxx',
-    showCancelButton: true, confirmButtonText: 'متابعة', cancelButtonText: 'إلغاء', confirmButtonColor: '#25D366',
-    inputValidator: (value) => { if (!value || !value.trim()) return 'الرجاء إدخال رقم الجوال'; }
-  }).then(async r => {
-    if (!r.isConfirmed) return;
-    let digits = r.value.replace(/[^\d]/g, '');
-    if (digits.startsWith('0')) digits = '966' + digits.slice(1);
-    else if (!digits.startsWith('966')) digits = '966' + digits;
-    const text = buildVacShareText(u);
-    const files = await vacUnitMediaToFiles(u);
-    const shareData = { title: u.propertyName || 'تفاصيل الوحدة', text };
-    if (files.length && navigator.canShare && navigator.canShare({ files })) shareData.files = files;
-    if (navigator.share) {
-      try { await navigator.share(shareData); return; }
-      catch (e) { if (e && e.name === 'AbortError') return; }
-    }
-    // لا يدعم المتصفح المشاركة المباشرة (غالباً على أجهزة الحاسوب) → نفتح واتساب بالرقم مع النص كبديل
-    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, '_blank');
-    if (files.length) showToast('تم فتح واتساب بالنص فقط، هذا الجهاز لا يدعم إرفاق الصور تلقائيًا', 'success');
-  });
-}
-// مشاركة مباشرة عبر واجهة المشاركة الأصلية للجهاز/المتصفح (Web Share API)
-// دون طلب أي رقم جوال. تُرسل معلومات الوحدة + الصور/الفيديو عند توفرها.
-// إن لم يدعم المتصفح المشاركة، يتم نسخ المحتوى تلقائياً إلى الحافظة مع إشعار.
-async function shareVacUnitNative(id) {
-  const u = appData.vacant.units.find(x=>x.id===id); if (!u) return;
-  const text = buildVacShareText(u);
-  const files = await vacUnitMediaToFiles(u);
-  const shareData = { title: u.propertyName || 'تفاصيل الوحدة', text };
-  if (files.length && navigator.canShare && navigator.canShare({ files })) shareData.files = files;
-  if (navigator.share) {
-    try {
-      if (shareData.files && !navigator.canShare(shareData)) delete shareData.files;
-      await navigator.share(shareData);
-      return;
-    } catch (e) {
-      if (e && e.name === 'AbortError') return;
-      // فشل المشاركة مع المرفقات (مثال: "Share too large" عند تجاوز حجم الملفات
-      // الحد المسموح للمتصفح) → أعد المحاولة بالنص فقط دون الصور/الفيديوهات
-      if (shareData.files) {
-        try {
-          await navigator.share({ title: shareData.title, text: shareData.text });
-          showToast('تم فتح المشاركة بالنص فقط، حجم المرفقات كان كبيراً على المتصفح', 'success');
-          return;
-        } catch (e2) {
-          if (e2 && e2.name === 'AbortError') return;
-        }
-      }
-    }
-  }
-  // تعذرت المشاركة نهائياً (أو المتصفح لا يدعمها) → انسخ المحتوى تلقائياً إلى الحافظة مع إشعار للمستخدم
-  copyVacUnit(id);
-}
+// دوال المشاركة (shareVacUnitNative وغيرها) انتقلت إلى js/modules/vacancy-share.js
 let vfMediaTemp = [];
 
 function ensureVacantData() {
@@ -411,7 +338,7 @@ function renderVacantList(status) {
                 ${!isSectionViewOnly('vac') ? `<button class="btn btn-sm btn-secondary btn-edit-vac" onclick="editVacUnit('${u.id}')" title="تعديل"><i class="fas fa-edit"></i><span class="btn-label">تعديل</span></button>` : ''}
                 <button class="btn btn-sm btn-secondary" onclick="downloadVacMedia('${u.id}')" title="تنزيل الصور/الفيديوهات"><i class="fas fa-download"></i><span class="btn-label">تنزيل</span></button>
                 <button class="btn btn-sm btn-secondary" onclick="sendVacUnitWhatsapp('${u.id}')" title="إرسال عبر واتساب"><i class="fab fa-whatsapp"></i><span class="btn-label">واتساب</span></button>
-                <button class="btn btn-sm btn-secondary" onclick="shareVacUnitNative('${u.id}')" title="مشاركة"><i class="fas fa-share-alt"></i><span class="btn-label">مشاركة</span></button>
+                <button class="btn btn-sm btn-secondary" onclick="shareVacUnitNative('${u.id}')" onpointerenter="vacWarmShare('${u.id}')" ontouchstart="vacWarmShare('${u.id}')" onfocus="vacWarmShare('${u.id}')" title="مشاركة"><i class="fas fa-share-alt"></i><span class="btn-label">مشاركة</span></button>
                 ${status==='available' ? `<button class="btn btn-sm btn-danger vac-status-btn" onclick="reserveVacUnit('${u.id}')" title="حجز"><i class="fas fa-lock"></i><span class="btn-label">حجز</span></button>` : ''}
                 ${status==='reserved' ? `<button class="btn btn-sm btn-primary vac-status-btn" onclick="rentVacUnit('${u.id}')" title="نقل إلى المؤجرة"><i class="fas fa-right-left"></i><span class="btn-label">تأجير</span></button>` : ''}
                 ${status==='reserved' ? `<button class="btn btn-sm btn-secondary vac-status-btn" onclick="unreserveVacUnit('${u.id}')" title="فك الحجز"><i class="fas fa-lock-open"></i><span class="btn-label">فك الحجز</span></button>` : ''}
